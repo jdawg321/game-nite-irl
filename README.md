@@ -10,6 +10,8 @@ Real-world group games, starting with Sardines. Native iPhone app + Supabase bac
 | `docs/` | Product requirements, TestFlight plan, the clickable HTML prototype |
 
 ## Setup
+Supabase project: `bfilcrkwmkvrdnrbllbd` ("Game Nite IRL", Home OS organization, ca-central-1). It also holds an older, empty Home OS schema (people, chores, point_ledger, …); Game Nite's migration leaves those objects untouched.
+
 1. Apply `supabase/migrations/*.sql` to the Supabase project.
 2. Put the project URL and publishable key in `ios/GameNite/Data/Config.swift` and `dashboard/config.js`.
 3. Supabase dashboard → Authentication:

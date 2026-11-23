@@ -50,7 +50,7 @@ struct SignInView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     if !codeSent {
-                        TextField("", text: $email, prompt: Text("you@example.com").foregroundStyle(Theme.muted))
+                        TextField("", text: $email, prompt: Text(verbatim: "you@example.com").foregroundStyle(Theme.muted))
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)

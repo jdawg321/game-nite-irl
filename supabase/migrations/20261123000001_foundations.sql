@@ -329,7 +329,16 @@ begin
 end $$;
 
 -- ---------- function privileges ----------
-revoke execute on all functions in schema public from public, anon;
+-- Only Game Nite's own functions (other apps' functions in this schema are left alone).
+revoke execute on function
+  public.handle_new_user(), public.is_organizer(), public.is_game_member(uuid), public.default_config(),
+  public.new_join_code(), public.log_action(uuid, text, jsonb), public.require_organizer(uuid),
+  public.join_game(text), public.leave_game(uuid), public.set_ready(uuid, boolean),
+  public.set_volunteer(uuid, boolean), public.create_game(text, text, timestamptz, text, jsonb),
+  public.update_game_config(uuid, jsonb), public.open_lobby(uuid),
+  public.set_player_role(uuid, uuid, public.player_role), public.remove_player(uuid, uuid, text),
+  public.start_game(uuid), public.terminate_game(uuid, text)
+from public, anon, authenticated;
 grant execute on function
   public.join_game(text), public.leave_game(uuid), public.set_ready(uuid, boolean),
   public.set_volunteer(uuid, boolean), public.create_game(text, text, timestamptz, text, jsonb),
