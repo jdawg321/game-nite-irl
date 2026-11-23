@@ -1,0 +1,949 @@
+<title>IRL Games Sardines</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: phone (player) beside an organizer console, over a cool "tin" ground; orange = hiding group, blue = seekers. */
+/* 60-30-10: dark charcoal (60) · light neon blue accents (30) · white CTAs (10) */
+:root{
+  --bg:#1A1D21; --surface:#22262B; --surface-2:#2A2F35; --ink:#E6EAEE; --muted:#97A1AB; --line:#363C43;
+  --sea:#4FD8FF; --sea-soft:#163440; --lure:#FFFFFF; --lure-soft:#33383E;
+  --cta:#FFFFFF; --cta-ink:#15181B;
+  --ok:#3FD68A; --ok-soft:#173528; --warn:#F2B84B; --warn-soft:#3B2F17; --crit:#FF5F5F; --crit-soft:#41201F;
+  --street:#3A4047; --block:#24282D; --block-line:#2E3339; --frame:#0C0E10;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1440px;margin:0 auto}
+
+/* top bar */
+.topbar{padding-block:18px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.brand .tag{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.guide{flex:1 1 360px;min-width:0;display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.guide b{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--sea);white-space:nowrap}
+.simctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.seg button{border:0;background:none;padding:5px 10px;border-radius:6px;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+.label-sm{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+
+.pane-switch{display:none;margin-bottom:12px}
+.stage{display:grid;grid-template-columns:392px minmax(0,1fr);gap:24px;align-items:start;padding-bottom:40px}
+@media (max-width:1000px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .pane-switch{display:flex}
+  .stage[data-pane="player"] .org-col{display:none}
+  .stage[data-pane="organizer"] .player-col{display:none}
+}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 14px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover:not(:disabled){border-color:var(--sea)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary,.btn.lure{background:linear-gradient(110deg,var(--sea) 0%,#9BE9FF 25%,var(--cta) 50%,#9BE9FF 75%,var(--sea) 100%);background-size:200% 100%;animation:flow 6s linear infinite;animation-delay:var(--clock,0s);border:1px solid rgba(255,255,255,.55);color:var(--cta-ink);letter-spacing:.01em;box-shadow:0 0 0 1px rgba(79,216,255,.35),0 6px 22px -6px rgba(79,216,255,.75),inset 0 1px 0 rgba(255,255,255,.7);transition:box-shadow .25s ease,transform .15s ease}
+.btn.primary:hover:not(:disabled),.btn.lure:hover:not(:disabled){border-color:#fff;box-shadow:0 0 0 1px rgba(79,216,255,.6),0 8px 30px -4px rgba(79,216,255,.95),inset 0 1px 0 #fff}
+.btn.primary:active:not(:disabled),.btn.lure:active:not(:disabled){transform:translateY(1px)}
+.btn.primary:disabled,.btn.lure:disabled{box-shadow:none;animation:none}
+@keyframes flow{from{background-position:0% 50%}to{background-position:-200% 50%}}
+@keyframes edgeflow{from{background-position:0 0,0% 50%}to{background-position:0 0,-200% 50%}}
+@media (prefers-reduced-motion:reduce){.btn.primary,.btn.lure,.evcard,.evcard .art,.mega{animation:none}}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}
+.btn.ghost-danger{color:var(--crit);border-color:var(--crit)}
+.btn.block{width:100%}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:7px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.sea{background:var(--sea-soft);color:var(--sea)}
+.pill.lure{background:var(--lure-soft);color:var(--lure)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:currentColor}
+
+/* phone */
+.player-col{position:sticky;top:12px}
+@media (max-width:1000px){.player-col{position:static;display:flex;justify-content:center}}
+.phone{width:100%;max-width:392px;height:800px;background:var(--surface);border:11px solid var(--frame);border-radius:48px;position:relative;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px -20px rgba(0,0,0,.7),0 0 0 1px var(--line)}
+@media (max-width:1000px){.phone{height:min(800px,calc(100vh - 140px));min-height:620px}}
+.statusbar{height:40px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 26px 0;font-size:13px;font-weight:600}
+.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:104px;height:28px;background:var(--frame);border-radius:16px;z-index:6}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding:6px 18px 18px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.tabbar{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);padding:6px 10px 14px;background:var(--surface)}
+.tabbar button{border:0;background:none;padding:6px;font-size:12px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar button[aria-current="true"]{color:var(--sea)}
+.tabbar button:disabled{opacity:.35;cursor:not-allowed}
+.tabbar svg{width:20px;height:20px}
+.megawrap{container-type:inline-size}
+.mega{margin:4px 0 2px;font-family:var(--display);font-weight:800;font-variation-settings:"opsz" 96;line-height:.84;letter-spacing:-.035em;text-transform:uppercase;background:linear-gradient(110deg,var(--sea) 0%,#9BE9FF 25%,var(--cta) 50%,#9BE9FF 75%,var(--sea) 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;animation-delay:var(--clock,0s);filter:drop-shadow(0 0 14px rgba(79,216,255,.45))}
+.mega span{display:block;white-space:nowrap}
+.mega .l1{font-size:calc(var(--k1,37.4) * 1cqi)}
+.mega .l2{font-size:calc(var(--k2,30.4) * 1cqi)}
+.ph-h{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.02em;margin:0;line-height:1.05;text-wrap:balance}
+.ph-sub{color:var(--muted);margin:2px 0 0}
+.card{background:var(--surface-2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.evcard{flex:none;border:2px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,linear-gradient(110deg,var(--sea) 0%,#9BE9FF 25%,var(--cta) 50%,#9BE9FF 75%,var(--sea) 100%) border-box;background-size:100% 100%,200% 100%;animation:edgeflow 7s linear infinite;animation-delay:var(--clock,0s);box-shadow:0 0 0 1px rgba(79,216,255,.2),0 10px 34px -10px rgba(79,216,255,.7);text-align:left;border-radius:16px;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.evcard .art{height:92px;background:linear-gradient(110deg,var(--sea) 0%,#9BE9FF 25%,#E9FBFF 50%,#9BE9FF 75%,var(--sea) 100%);background-size:200% 100%;animation:flow 9s linear infinite;animation-delay:var(--clock,0s);position:relative;overflow:hidden}
+.evcard .body{padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.evcard h3{font-family:var(--display);font-size:20px;margin:0;letter-spacing:-.01em}
+.evcard.dim{animation-duration:11s;box-shadow:0 0 0 1px rgba(79,216,255,.12),0 10px 30px -12px rgba(79,216,255,.45)}
+.evcard.dim .body{opacity:.6}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:500}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label,.field .lbl{font-size:13px;font-weight:600}
+.input{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 11px;width:100%;min-width:0}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.check input{margin-top:2px;width:17px;height:17px;flex:none;accent-color:var(--sea)}
+.rules{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.back{border:0;background:none;color:var(--sea);font-weight:600;padding:0;align-self:flex-start}
+.signin button{justify-content:flex-start;padding:12px 14px}
+.toasts{position:absolute;top:44px;left:10px;right:10px;z-index:5;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{background:var(--surface-2);color:var(--ink);border:1px solid var(--sea);border-radius:14px;padding:9px 12px;font-size:13px;box-shadow:0 8px 20px -8px rgba(0,0,0,.4);display:flex;gap:8px;align-items:flex-start;animation:drop .25s ease-out}
+.toast .k{font-size:10px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;white-space:nowrap;padding-top:2px}
+.toast.safety{background:var(--crit);color:#fff}
+@keyframes drop{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}.pulse{animation:none!important}}
+.hud{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.hud .timer{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1;text-align:right}
+.hud .timer small{display:block;font-family:var(--body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:3px}
+.map{width:100%;height:auto;display:block;border-radius:14px;background:var(--street);touch-action:manipulation}
+.map.tap{cursor:crosshair}
+.clue{border-radius:12px;padding:10px 12px;background:var(--sea-soft);color:var(--ink);font-size:13px}
+.clue b{color:var(--sea)}
+.clue.lure{background:var(--lure-soft)}
+.clue.lure b{color:var(--lure)}
+.banner{border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner.crit{background:var(--crit-soft);color:var(--crit)}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+.testctl{border:1px dashed var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.overlay{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:30px;text-align:center}
+.overlay.crit{background:var(--crit);color:#fff}
+.overlay.prep{background:var(--surface)}
+.overlay h2{font-family:var(--display);font-size:34px;margin:0;line-height:1.05;letter-spacing:-.02em}
+.bigcount{font-family:var(--mono);font-size:84px;font-weight:600;line-height:1}
+.rolebadge{font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:-.02em}
+.standings{display:flex;flex-direction:column;gap:2px}
+.srow{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;font-size:13px}
+.srow.me{background:var(--sea-soft);font-weight:600}
+.srow .rk{font-family:var(--mono);font-weight:600}
+.srow .basis{color:var(--muted);font-size:12px;text-align:right}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--sea);color:var(--cta-ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:24px}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface-2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--mono);font-size:20px}
+.stat span{font-size:11px;color:var(--muted)}
+.perm{display:grid;grid-template-columns:1fr;gap:6px}
+.perm button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;font-size:13px}
+.perm button[aria-pressed="true"]{border-color:var(--sea);background:var(--sea-soft)}
+.avatars{display:flex;flex-wrap:wrap;gap:4px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--muted)}
+.av.me{background:var(--sea);border-color:var(--sea);color:var(--cta-ink)}
+
+/* organizer */
+.console{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;min-width:0}
+.c-head{padding:18px 20px 14px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--line)}
+.c-title .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.c-title h2{font-family:var(--display);font-size:24px;margin:2px 0 0;letter-spacing:-.015em;text-wrap:balance}
+.c-actions{display:flex;flex-wrap:wrap;gap:8px}
+.states{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--surface-2);font-family:var(--mono);font-size:11px}
+.states span{padding:3px 7px;border-radius:5px;color:var(--muted)}
+.states span.on{background:var(--sea);color:var(--cta-ink)}
+.states span.on.crit{background:var(--crit);color:#fff}
+.states i{color:var(--line);font-style:normal}
+.tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:12px 10px;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--sea)}
+.badge{min-width:18px;height:18px;border-radius:9px;background:var(--crit);color:#fff;font-size:11px;display:inline-grid;place-items:center;padding:0 5px}
+.badge.n{background:var(--surface-2);color:var(--muted)}
+.c-body{padding:20px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.lock{display:flex;gap:10px;align-items:center;background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-weight:600;font-size:13px}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+fieldset{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+legend{font-weight:700;font-size:13px;padding:0 6px}
+fieldset .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+fieldset .row > span{font-size:13px}
+fieldset select,fieldset input[type=number]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;min-width:0}
+fieldset input[type=number]{width:72px}
+.hint{font-size:12px;color:var(--muted)}
+.tag-open{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);background:var(--warn-soft);padding:2px 6px;border-radius:4px}
+.joinbox{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-radius:12px;padding:14px}
+.joinbox .code{font-family:var(--mono);font-size:28px;font-weight:600;letter-spacing:.04em}
+.qr{width:84px;height:84px;background:#fff;padding:4px;border-radius:6px;flex:none}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:8px 12px;background:var(--surface-2);white-space:nowrap}
+td{padding:8px 12px;border-top:1px solid var(--line);white-space:nowrap}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.me td{background:var(--sea-soft)}
+.live{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px}
+@media (max-width:1240px){.live{grid-template-columns:minmax(0,1fr)}}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi{background:var(--surface-2);border-radius:10px;padding:10px 12px}
+.kpi b{display:block;font-family:var(--mono);font-size:22px;font-weight:600}
+.kpi span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.item.crit{border-color:var(--crit)}
+.item.warn{border-color:var(--warn)}
+.item .top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.item .meta{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);font-size:13px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+.audit{font-size:13px;display:flex;flex-direction:column}
+.audit div{display:grid;grid-template-columns:72px 120px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.audit div:first-child{border-top:0}
+@media (max-width:560px){.audit div{grid-template-columns:64px 1fr}.audit .who{display:none}}
+.h3{font-family:var(--display);font-size:17px;font-weight:600;margin:0}
+.sendrow{display:flex;gap:8px;flex-wrap:wrap}
+.sendrow .input{flex:1 1 180px}
+.err{color:var(--crit);font-size:13px;font-weight:600}
+.pulse{animation:pulse 1.6s ease-out infinite;transform-origin:center;transform-box:fill-box}
+@keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(2.4)}}
+.note{font-size:12px;color:var(--muted);padding-block:0 30px}
+</style>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand"><h1>IRL Games</h1><span class="tag">Sardines · clickable prototype</span></div>
+    <div class="guide" id="guide"></div>
+    <div class="simctl" id="simctl"></div>
+  </header>
+  <div class="pane-switch seg" id="paneSwitch"></div>
+  <main class="stage" id="stage" data-pane="player">
+    <section class="player-col" id="player" aria-label="Player app"></section>
+    <section class="org-col" id="org" aria-label="Organizer console"></section>
+  </main>
+  <p class="note">Prototype with simulated players and mocked sign-in, GPS and notifications. Nothing is sent anywhere. Sim speed compresses the game clock so a 20-minute game can be watched in a few minutes.</p>
+</div>
+
+<script>
+// ---------- helpers ----------
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const ord=n=>{const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
+const mmss=s=>{s=Math.max(0,Math.ceil(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
+
+// ---------- world ----------
+const MAP={w:900,h:640,B:{x0:100,y0:40,x1:800,y1:600},start:{x:350,y:400},
+  H:[{y:80,n:'200 N'},{y:240,n:'100 N'},{y:400,n:'Center St'},{y:560,n:'100 S'}],
+  V:[{x:150,n:'100 W'},{x:350,n:'University Ave'},{x:550,n:'100 E'},{x:750,n:'200 E'}]};
+const B=MAP.B;
+const HIDE_SPOTS=[{x:612,y:178},{x:252,y:498},{x:688,y:470},{x:214,y:150},{x:468,y:318},{x:452,y:510}];
+const NAMES=['Maya','Ethan','Sofia','Liam','Ava','Noah','Chloe','Caleb','Grace','Owen','Lily','Isaac','Hannah','Eli','Ruby','Jonah','Nora','Miles','Zoe','Gavin','Leah','Tyler','Emma'];
+const DEFAULT_CFG={hiders:1,method:'random',headStart:true,headStartMin:3,startMode:'manual',durationMin:20,reveal:'proximity',revealEveryMin:2,threshold:15,accuracyMax:20,seekersSeeSeekers:false,hidersSeeSeekers:true,capacity:50,minPlayers:4,distRef:'origin',hiderRank:'separate'};
+const CFG_LABEL={hiders:'Initial hiders',method:'Hider selection',headStart:'Head start',headStartMin:'Head start length',startMode:'Start method',durationMin:'Duration',reveal:'GPS reveal mode',revealEveryMin:'Reveal interval',threshold:'Find radius',accuracyMax:'GPS accuracy limit',seekersSeeSeekers:'Seekers see seekers',hidersSeeSeekers:'Hiding group sees seekers',capacity:'Capacity',minPlayers:'Minimum players',distRef:'Distance reference',hiderRank:'Initial hider ranking'};
+
+const S={speed:10,pane:'player',g:null,me:null,ui:null,toasts:[],hold:false};
+let idc=0,tid=0;
+
+function reset(){
+  idc=0;
+  S.g={state:'DRAFT',type:'scheduled',title:'Friday Night Sardines',code:'SRD-4821',cfg:{...DEFAULT_CFG},rulesVersion:1,lockedAt:null,now:0,clock:0,prepLeft:0,headLeft:0,emergency:false,
+    players:[],finds:[],incidents:[],audit:[],seq:0,hideSpot:null,origin:null,botPool:[...NAMES],picks:[],results:null,autoStartAt:null,circle:null,revealUntil:-1,lastReveal:0,fid:0,iid:0,endReason:'',termReason:''};
+  S.me={screen:'browse',tab:'events',signedIn:false,provider:null,name:'',age:false,rules:false,replay:false,locPerm:null,codeIn:'',codeErr:'',target:null,findMsg:null,gameNotifs:true,incCat:'Unsafe area',incText:'',incOpen:false,incSent:false};
+  S.ui={orgTab:'setup',announce:'',safetyMsg:false,reasons:{},confirmTerm:false,startErr:null,showTrails:true};
+  S.toasts=[];
+  audit('Created scheduled event "Friday Night Sardines" (Sardines, rules v1)');
+}
+function wall(sec){const t=19*3600+40*60+(sec??S.g.now);let h=Math.floor(t/3600)%24;const m=Math.floor(t/60)%60;const ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${String(m).padStart(2,'0')} ${ap}`;}
+function audit(what,who='Organizer (you)'){S.g.audit.push({t:wall(),who,what});}
+function notify(text,kind='game'){
+  if(!getMe()&&kind!=='account')return;
+  if(kind!=='safety'&&kind!=='account'&&!S.me.gameNotifs)return;
+  S.toasts.push({id:++tid,text,kind,until:performance.now()+6500});
+  if(S.toasts.length>3)S.toasts.shift();
+}
+const getMe=()=>S.g.players.find(p=>p.isMe);
+const group=()=>S.g.players.filter(p=>p.role==='hider');
+const seekersLeft=()=>S.g.players.filter(p=>p.role==='seeker');
+const inBounds=p=>p.x>=B.x0&&p.x<=B.x1&&p.y>=B.y0&&p.y<=B.y1;
+const locked=()=>!['DRAFT','LOBBY'].includes(S.g.state);
+
+function addPlayer(name,isMe){
+  const g=S.g;
+  const p={id:isMe?'me':'p'+(++idc),name,isMe,role:'seeker',initialRole:'seeker',foundSeq:null,foundAt:null,
+    x:MAP.start.x+rnd(-28,28),y:MAP.start.y+rnd(-22,22),rep:null,closest:Infinity,closestAt:null,
+    consent:isMe?S.me.replay:Math.random()<.6,volunteer:isMe?false:Math.random()<.3,ready:false,readyAt:g.now+rnd(4,30),
+    gpsLost:false,gpsLostUntil:0,out:false,trail:[],goal:null,goalUntil:0,skill:rnd(.25,1),nextSample:0,findCooldown:0,
+    locPerm:isMe?S.me.locPerm:(Math.random()<.85?'always':'while')};
+  g.players.push(p);return p;
+}
+
+// ---------- location ----------
+function sample(p){
+  const g=S.g;p.nextSample=g.now+25;
+  if(p.gpsLost||p.locPerm==='denied')return;
+  const acc=p.role==='hider'&&!p.isMe?rnd(4,10):p.isMe?rnd(4,11):(Math.random()<.15?rnd(22,40):rnd(4,16));
+  const a=Math.random()*Math.PI*2,r=Math.random()*acc*.6;
+  p.rep={x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r,acc:Math.round(acc),t:g.now};
+  if(g.state==='ACTIVE'){
+    if(p.consent)p.trail.push([Math.round(p.rep.x),Math.round(p.rep.y),p.role]);
+    if(p.role==='seeker'&&g.headLeft<=0&&p.rep.acc<=g.cfg.accuracyMax){
+      const d=scoreDist(p.rep);if(d<p.closest-.01){p.closest=d;p.closestAt=g.clock;}
+    }
+  }
+}
+const fresh=p=>!!p.rep&&!p.gpsLost&&S.g.now-p.rep.t<=90;
+function nearestMemberDist(pt){
+  let best=Infinity;
+  for(const h of group()){if(h.rep&&!h.gpsLost)best=Math.min(best,dist(pt,h.rep));}
+  if(best===Infinity&&S.g.hideSpot)best=dist(pt,S.g.hideSpot);
+  return best;
+}
+function scoreDist(pt){return S.g.cfg.distRef==='origin'?dist(pt,S.g.origin):nearestMemberDist(pt);}
+
+// ---------- finds ----------
+function requestFind(p){
+  const g=S.g,c=g.cfg;
+  if(g.finds.some(f=>f.seekerId===p.id&&['confirming','review'].includes(f.status)))return {status:'dup'};
+  sample(p);
+  const ok=fresh(p)&&S.g.now-p.rep.t<=1;
+  const d=ok?nearestMemberDist(p.rep):null;
+  const f={id:++g.fid,seekerId:p.id,name:p.name,at:g.clock,wall:wall(),dist:d,acc:ok?p.rep.acc:null,status:null,reason:'',confirmerId:null,deadline:0,botAt:0,how:''};
+  if(!ok){f.status='review';f.reason=p.locPerm==='denied'?'Location permission denied':'No fresh location fix (GPS lost or stale)';}
+  else if(p.rep.acc<=c.accuracyMax){ if(d<=c.threshold){f.status='confirming';assignConfirmer(f);} else f.status='too-far'; }
+  else if(d<=c.threshold+p.rep.acc){f.status='review';f.reason=`GPS accuracy ±${p.rep.acc} m is worse than the ±${c.accuracyMax} m limit`;}
+  else f.status='too-far';
+  if(f.status!=='too-far')g.finds.push(f);
+  return f;
+}
+function assignConfirmer(f,exclude){
+  const g=S.g;const members=group().filter(h=>!h.gpsLost&&h.id!==exclude);
+  const me=members.find(h=>h.isMe);
+  if(!members.length){f.status='review';f.reason='No hiding-group member available to confirm';return;}
+  if(me&&f.seekerId!=='me'){f.confirmerId='me';f.deadline=g.now+30;notify(`${f.name} says they found the hiding group. Confirm in the game screen.`,'found');}
+  else{const bots=members.filter(h=>!h.isMe);const b=pick(bots.length?bots:members);f.confirmerId=b.id;f.botAt=g.now+rnd(3,9);f.deadline=g.now+30;}
+}
+function verify(f,how){
+  const g=S.g;const p=g.players.find(x=>x.id===f.seekerId);
+  if(!p||p.role!=='seeker'){f.status='rejected';return;}
+  f.status='verified';f.how=how;p.role='hider';p.foundSeq=++g.seq;p.foundAt=g.clock;p.goal=null;
+  if(p.isMe){notify(`Find verified. You joined the hiding group as #${p.foundSeq}. ${how}.`,'found');S.me.findMsg=null;S.me.target={...g.hideSpot};}
+  else{const me=getMe();if(me&&me.role==='hider')notify(`${p.name} joined the hiding group.`,'found');}
+  if(!seekersLeft().length)finish('All seekers found');
+}
+function processFinds(){
+  const g=S.g;
+  for(const f of g.finds){
+    if(g.state!=='ACTIVE')break;
+    if(f.status!=='confirming')continue;
+    const s=g.players.find(x=>x.id===f.seekerId);
+    if(f.confirmerId!=='me'&&g.now>=f.botAt){
+      if(s&&dist(s,g.hideSpot)<=g.cfg.threshold+12)verify(f,`Confirmed by ${g.players.find(x=>x.id===f.confirmerId)?.name||'hiding group'}`);
+      else{f.status='review';f.reason=`Hiding group said "not here"`;}
+    }else if(f.confirmerId==='me'&&g.now>f.deadline){
+      f.reason='You did not respond; passed to another member';assignConfirmer(f,'me');
+    }
+  }
+}
+
+// ---------- game lifecycle ----------
+function openLobby(){
+  const g=S.g;g.state='LOBBY';
+  if(g.cfg.startMode==='scheduled')g.autoStartAt=g.now+150;
+  audit(`Opened lobby. Join code ${g.code} published.`);S.ui.orgTab='players';
+}
+function startGame(auto){
+  const g=S.g,c=g.cfg;
+  const n=Math.max(1,Math.min(c.hiders,g.players.length-1));
+  if(g.players.length<c.minPlayers){S.ui.startErr=`Need at least ${c.minPlayers} players (${g.players.length} joined).`;return;}
+  let chosen;
+  if(c.method==='random')chosen=shuffle([...g.players]).slice(0,n);
+  else{chosen=g.players.filter(p=>g.picks.includes(p.id));
+    if(chosen.length!==n){S.ui.startErr=`Pick exactly ${n} hider${n>1?'s':''} on the Players tab (${chosen.length} selected).`;if(!auto)S.ui.orgTab='players';return;}}
+  S.ui.startErr=null;
+  chosen.forEach(p=>{p.role='hider';p.initialRole='hider';});
+  g.hideSpot={...pick(HIDE_SPOTS)};g.origin={...g.hideSpot};
+  g.state='PREPARING';g.prepLeft=10;g.lockedAt=wall();
+  audit(`${auto?'Auto-started':'Started'} game. Rules v${g.rulesVersion} locked. Hiders: ${chosen.map(p=>p.name).join(', ')} (${c.method}).`,auto?'System':'Organizer (you)');
+  const me=getMe();
+  if(me){S.me.screen='game';S.me.tab='game';
+    notify(me.role==='hider'?'You are a HIDER. Your hiding spot is marked on the map.':'You are a SEEKER. Wait at the start until hiders are hidden.','game');
+    if(me.role==='hider')S.me.target={...g.hideSpot};}
+  S.ui.orgTab='live';
+}
+function beginActive(){
+  const g=S.g,c=g.cfg;g.state='ACTIVE';g.headLeft=c.headStart?c.headStartMin*60:0;
+  g.players.forEach(sample);
+  notify(g.headLeft?`Head start: hiders have ${mmss(g.headLeft)} to hide. Seekers, stay at the start.`:'Go! Seekers are released.','game');
+}
+function finish(reason){
+  const g=S.g;if(g.state==='FINISHED')return;
+  g.state='FINISHED';g.endReason=reason;g.emergency=false;g.results=computeResults();
+  audit(`Game finished: ${reason}. Results published.`,'System');
+  const me=getMe();
+  if(me){const r=g.results.rows.find(x=>x.p.isMe);
+    notify(r?`Game over. You placed ${ord(r.rank)}${r.shared?' (shared)':''} of ${g.results.rows.length}.`:'Game over. You were a hider. Standings are in.','result');
+    S.me.screen='game';S.me.tab='game';}
+  S.ui.orgTab='results';
+}
+function computeResults(){
+  const g=S.g,c=g.cfg,TOL=5;
+  const bucket=p=>isFinite(p.closest)?Math.round(p.closest/TOL):1e9;
+  const hiders=g.players.filter(p=>p.initialRole==='hider'&&p.role!=='removed');
+  const seekers=g.players.filter(p=>p.initialRole==='seeker'&&p.role!=='removed');
+  const found=seekers.filter(p=>p.foundSeq!=null).sort((a,b)=>a.foundSeq-b.foundSeq);
+  const unf=seekers.filter(p=>p.foundSeq==null).sort((a,b)=>bucket(a)-bucket(b)||(a.closestAt??1e9)-(b.closestAt??1e9));
+  const rows=[];let rank=1;
+  if(c.hiderRank==='top'){hiders.forEach(h=>rows.push({p:h,rank:1,shared:hiders.length>1,basis:'Initial hider'}));rank=2;}
+  found.forEach(p=>{rows.push({p,rank,shared:false,basis:`Found #${p.foundSeq} at ${mmss(p.foundAt)}`});rank++;});
+  let i=0;
+  while(i<unf.length){let j=i+1;
+    while(j<unf.length&&bucket(unf[j])===bucket(unf[i])&&unf[j].closestAt===unf[i].closestAt)j++;
+    for(let k=i;k<j;k++){const p=unf[k];rows.push({p,rank,shared:j-i>1,basis:isFinite(p.closest)?`Closest ${Math.round(p.closest)} m at ${mmss(p.closestAt)}`:'No valid location recorded'});}
+    rank+=j-i;i=j;}
+  return {rows,hiders:c.hiderRank==='separate'?hiders:[],removed:g.players.filter(p=>p.role==='removed')};
+}
+
+// ---------- simulation ----------
+function moveToward(p,t,speed){const d=dist(p,t);if(d<.3)return;const s=Math.min(speed,d);p.x+=(t.x-p.x)/d*s;p.y+=(t.y-p.y)/d*s;}
+function botSec(p){
+  const g=S.g;
+  if(p.role==='hider'){
+    if(!p.slot)p.slot={x:g.hideSpot.x+rnd(-4,4),y:g.hideSpot.y+rnd(-4,4)};
+    const sp=p.initialRole==='hider'&&g.headLeft>0?Math.max(1.4,dist(MAP.start,g.hideSpot)/(g.cfg.headStartMin*60*.6)):1.7;
+    moveToward(p,p.slot,sp);return;
+  }
+  if(g.headLeft>0)return;
+  if(g.finds.some(f=>f.seekerId===p.id&&['confirming','review'].includes(f.status)))return; // waits for the verdict
+  const frac=g.clock/(g.cfg.durationMin*60);const dh=dist(p,g.hideSpot);
+  if(!p.goal||g.now>=p.goalUntil||dist(p,p.goal)<4){
+    const homing=Math.random()<.12+p.skill*frac*.85;
+    const spread=70*(1.15-p.skill);
+    p.goal=homing?{x:g.hideSpot.x+rnd(-spread,spread),y:g.hideSpot.y+rnd(-spread,spread)}:{x:rnd(B.x0+12,B.x1-12),y:rnd(B.y0+12,B.y1-12)};
+    p.goalUntil=g.now+rnd(25,80);
+  }
+  if(dh<45&&Math.random()<.05*p.skill)p.goal={...g.hideSpot};
+  moveToward(p,p.goal,rnd(1,1.6));
+  if(dh<g.cfg.threshold*.8&&!p.gpsLost&&g.now>=p.findCooldown){p.goal={x:p.x,y:p.y};requestFind(p);p.findCooldown=g.now+30;}
+}
+function sec(){
+  const g=S.g,c=g.cfg;g.now++;
+  if(g.state==='LOBBY'){
+    if(g.botPool.length&&g.players.length<c.capacity&&g.now%2===0)addPlayer(g.botPool.shift(),false);
+    g.players.forEach(p=>{if(!p.isMe&&!p.ready&&g.now>=p.readyAt)p.ready=true;});
+    if(c.startMode==='scheduled'&&g.autoStartAt!=null&&g.now>=g.autoStartAt){g.autoStartAt=null;startGame(true);if(g.state==='LOBBY')g.autoStartAt=g.now+30;}
+    if(c.startMode==='ready'&&g.players.length>=c.minPlayers&&g.players.every(p=>p.ready)&&!g.botPool.length)startGame(true);
+    return;
+  }
+  if(g.state==='PREPARING'){g.prepLeft--;if(g.prepLeft<=0)beginActive();return;}
+  if(g.state!=='ACTIVE')return;
+  if(g.headLeft>0){g.headLeft--;if(g.headLeft===0){g.origin={...g.hideSpot};notify('Seekers released. Go find the sardines!','game');}}
+  else{g.clock++;const left=c.durationMin*60-g.clock;
+    if(left===300)notify('5 minutes left.','game');
+    if(left<=0){finish('Time expired');return;}}
+  const me=getMe();
+  for(const p of g.players){
+    if(p.role==='removed')continue;
+    if(p.isMe){
+      const canMove=!(p.role==='seeker'&&g.headLeft>0);
+      if(canMove&&S.me.target)moveToward(p,S.me.target,1.5);
+      const was=p.out;p.out=!inBounds(p);
+      if(p.out&&!was){notify('You are outside the game boundary. Head back inside the dashed line.','safety');audit(`Out-of-bounds alert: ${p.name}`,'System');}
+    }else{
+      botSec(p);
+      if(!p.gpsLost&&Math.random()<.0005){p.gpsLost=true;p.gpsLostUntil=g.now+rnd(40,140);}
+      if(p.gpsLost&&g.now>=p.gpsLostUntil){p.gpsLost=false;sample(p);}
+    }
+    if(g.now>=p.nextSample)sample(p);
+  }
+  if(g.headLeft<=0){
+    if(c.reveal==='continuous'&&(g.now%30===0||!g.circle))g.circle={x:g.hideSpot.x+rnd(-55,55),y:g.hideSpot.y+rnd(-55,55),r:95};
+    if(c.reveal==='periodic'&&g.clock-g.lastReveal>=c.revealEveryMin*60){g.lastReveal=g.clock;g.revealUntil=g.clock+45;g.circle={x:g.hideSpot.x+rnd(-55,55),y:g.hideSpot.y+rnd(-55,55),r:95};notify('Clue released: the hiding area is shown on your map for 45 s.','clue');}
+  }
+  processFinds();
+}
+
+// ---------- map ----------
+function mapSVG(o){
+  const xs=[0,...MAP.V.map(v=>v.x),MAP.w],ys=[0,...MAP.H.map(h=>h.y),MAP.h];
+  let s=`<svg class="map${o.tap?' tap':''}" viewBox="70 18 760 604" ${o.tap?'data-act="mapTap"':''} role="img" aria-label="${esc(o.label||'Game map of downtown Provo')}">`;
+  s+=`<rect x="0" y="0" width="${MAP.w}" height="${MAP.h}" fill="var(--street)"/>`;
+  for(let i=0;i<xs.length-1;i++)for(let j=0;j<ys.length-1;j++){
+    const x0=xs[i]+(i?10:0),x1=xs[i+1]-(i<xs.length-2?10:0),y0=ys[j]+(j?10:0),y1=ys[j+1]-(j<ys.length-2?10:0);
+    s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" rx="4" fill="var(--block)" stroke="var(--block-line)"/>`;}
+  MAP.H.forEach(h=>s+=`<text x="${B.x0+6}" y="${h.y+4}" font-size="12" fill="var(--muted)" font-family="Instrument Sans,system-ui" font-weight="600">${h.n}</text>`);
+  MAP.V.forEach(v=>s+=`<text x="${v.x+4}" y="${B.y0+16}" font-size="12" fill="var(--muted)" font-family="Instrument Sans,system-ui" font-weight="600" transform="rotate(90 ${v.x+4} ${B.y0+16})">${v.n}</text>`);
+  s+=`<rect x="${B.x0}" y="${B.y0}" width="${B.x1-B.x0}" height="${B.y1-B.y0}" fill="none" stroke="var(--crit)" stroke-width="3" stroke-dasharray="10 7" opacity=".7"/>`;
+  s+=`<g transform="translate(${MAP.start.x} ${MAP.start.y})"><rect x="-9" y="-9" width="18" height="18" rx="3" fill="var(--ink)"/><text y="4" text-anchor="middle" font-size="11" fill="var(--surface)" font-weight="700" font-family="Instrument Sans,system-ui">S</text></g>`;
+  if(o.trails)o.trails.forEach(t=>{if(t.pts.length>1)s+=`<polyline points="${t.pts.map(q=>q[0]+','+q[1]).join(' ')}" fill="none" stroke="${t.color}" stroke-width="2.5" stroke-linejoin="round" opacity=".55"/>`;});
+  if(o.circle)s+=`<circle cx="${o.circle.x}" cy="${o.circle.y}" r="${o.circle.r}" fill="var(--lure)" fill-opacity=".16" stroke="var(--lure)" stroke-dasharray="6 5" stroke-width="2"/>`;
+  if(o.spot)s+=`<g transform="translate(${o.spot.x} ${o.spot.y})"><circle r="16" fill="var(--lure)" fill-opacity=".18" stroke="var(--lure)" stroke-width="2"/><path d="M-6 0 Q0 -7 7 0 Q0 7 -6 0 Z M7 0 L11 -4 L11 4 Z" fill="var(--lure)"/></g>`;
+  if(o.target)s+=`<g transform="translate(${o.target.x} ${o.target.y})" opacity=".8"><line x1="-7" y1="-7" x2="7" y2="7" stroke="var(--ink)" stroke-width="2.5"/><line x1="-7" y1="7" x2="7" y2="-7" stroke="var(--ink)" stroke-width="2.5"/></g>`;
+  (o.dots||[]).forEach(d=>{
+    const col=d.role==='hider'?'var(--lure)':'var(--sea)';
+    s+=`<g><title>${esc(d.title||'')}</title>`;
+    if(d.acc)s+=`<circle cx="${d.x}" cy="${d.y}" r="${d.acc}" fill="${col}" fill-opacity=".08"/>`;
+    s+=d.stale?`<circle cx="${d.x}" cy="${d.y}" r="7.5" fill="var(--surface)" stroke="${col}" stroke-width="2.5" stroke-dasharray="3 2"/>`
+             :`<circle cx="${d.x}" cy="${d.y}" r="8" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+    if(d.alert)s+=`<circle cx="${d.x}" cy="${d.y}" r="13" fill="none" stroke="var(--crit)" stroke-width="2.5"/>`;
+    if(d.label)s+=`<text x="${d.x+11}" y="${d.y+4}" font-size="11" fill="var(--ink)" font-family="Instrument Sans,system-ui" font-weight="600">${esc(d.label)}</text>`;
+    s+=`</g>`;});
+  if(o.me){const m=o.me;
+    if(!m.stale)s+=`<circle class="pulse" cx="${m.x}" cy="${m.y}" r="11" fill="var(--sea)"/>`;
+    s+=`<circle cx="${m.x}" cy="${m.y}" r="11" fill="${m.stale?'var(--muted)':(m.role==='hider'?'var(--lure)':'var(--sea)')}" stroke="var(--surface)" stroke-width="3.5"/><text x="${m.x}" y="${m.y-17}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)" font-family="Instrument Sans,system-ui">You</text>`;}
+  if(o.veil)s+=`<rect x="70" y="18" width="760" height="604" fill="var(--surface)" opacity=".72"/><text x="450" y="322" text-anchor="middle" font-size="22" font-weight="700" fill="var(--ink)" font-family="Instrument Sans,system-ui">${esc(o.veil)}</text>`;
+  return s+`</svg>`;
+}
+function qrSVG(seed){
+  let h=0;for(const ch of seed)h=(h*31+ch.charCodeAt(0))>>>0;
+  const n=21;let s=`<svg class="qr" viewBox="0 0 ${n} ${n}" aria-label="Sample QR code for ${esc(seed)}" role="img"><rect width="${n}" height="${n}" fill="#fff"/>`;
+  const fin=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7" fill="#111"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#111"/>`;
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    if((x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12))continue;
+    h=(h*1103515245+12345)>>>0;if((h>>16)&1)s+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#111"/>`;}
+  return s+fin(0,0)+fin(14,0)+fin(0,14)+`</svg>`;
+}
+
+// ---------- player phone ----------
+const ICON={
+  events:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  game:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  profile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'};
+function renderPhone(){
+  const g=S.g,m=S.me,me=getMe();let body='';
+  if(m.tab==='profile')body=phProfile();
+  else if(m.tab==='game')body=phGame();
+  else body=({browse:phBrowse,event:phEvent,signin:phSignin,setup:phSetup}[m.screen]||phBrowse)();
+  let overlay='';
+  if(me&&g.state==='PREPARING'&&m.tab==='game')overlay=`<div class="overlay prep"><div class="label-sm">Game starts in</div><div class="bigcount">${g.prepLeft}</div><div class="label-sm">Your role</div><div class="rolebadge" style="color:${me.role==='hider'?'var(--lure)':'var(--sea)'}">${me.role==='hider'?'Hider':'Seeker'}</div><p class="ph-sub">${me.role==='hider'?'Get to the marked spot and stay hidden. Confirm seekers who reach you.':'Stay at the start (S) during the head start. Then find the hiding group.'}</p></div>`;
+  if(me&&g.emergency&&g.state==='PAUSED')overlay=`<div class="overlay crit" role="alertdialog" aria-label="Emergency pause"><div class="label-sm" style="color:#fff">Safety notice</div><h2>Emergency pause</h2><p>Stop where you are. Stay off the street and wait for organizer instructions. Location sharing between players is off.</p><button class="btn" style="color:var(--ink)" data-act="reportOpen">Report an incident</button></div>`;
+  const now=performance.now();S.toasts=S.toasts.filter(t=>t.until>now);
+  const kindLbl={game:'Game',clue:'Clue',found:'Find',result:'Results',safety:'Safety',account:'IRL Games'};
+  const toasts=`<div class="toasts" aria-live="polite">${S.toasts.map(t=>`<div class="toast ${t.kind==='safety'?'safety':''}"><span class="k">${kindLbl[t.kind]}</span><span>${esc(t.text)}</span></div>`).join('')}</div>`;
+  const gps=me&&me.gpsLost?'<span class="pill crit">GPS lost</span>':(me&&g.state==='ACTIVE'?'<span class="pill ok">GPS</span>':'');
+  const tab=(k,l,dis)=>`<button data-act="tab" data-arg="${k}" aria-current="${m.tab===k}" ${dis?'disabled':''}>${ICON[k]}${l}</button>`;
+  return `<div class="phone"><div class="notch"></div><div class="statusbar"><span class="mono">${wall()}</span>${gps}</div>${toasts}${overlay}
+    <div class="screen" id="ph-scroll" data-scroll>${body}</div>
+    <nav class="tabbar">${tab('events','Events')}${tab('game','Game',!me)}${tab('profile','Profile',!m.signedIn)}</nav></div>`;
+}
+function stateLabel(st){return {DRAFT:['Upcoming',''],LOBBY:['Lobby open','ok'],PREPARING:['Starting','warn'],ACTIVE:['Live now','sea'],PAUSED:['Paused','warn'],FINISHED:['Finished',''],TERMINATED:['Stopped','crit']}[st];}
+function eventArt(){return `<div class="art"><svg viewBox="0 0 360 92" width="100%" height="92" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  ${[...Array(9)].map((_,i)=>`<g transform="translate(${30+i*38} ${30+(i%3)*16}) rotate(${i%2?8:-6})" opacity="${.35+(i%3)*.2}"><path d="M-16 0 Q0 -10 16 0 Q0 10 -16 0 Z M16 0 L23 -6 L23 6 Z" fill="#fff"/></g>`).join('')}
+  <g transform="translate(300 62) rotate(-8)"><path d="M-22 0 Q0 -14 22 0 Q0 14 -22 0 Z M22 0 L32 -9 L32 9 Z" fill="var(--bg)"/><circle cx="-12" cy="-2" r="2" fill="var(--sea)"/></g></svg></div>`;}
+function phBrowse(){
+  const g=S.g,[lbl,cls]=stateLabel(g.state);
+  return `<div class="megawrap"><div class="label-sm">Provo, Utah</div><h2 class="mega" aria-label="Game nights"><span class="l1" aria-hidden="true">GAME</span><span class="l2" aria-hidden="true">NIGHTS</span></h2></div>
+  <div class="field"><label for="codeIn">Have a game code?</label><div class="sendrow"><input id="codeIn" class="input mono" data-bind="me.codeIn" value="${esc(S.me.codeIn)}" placeholder="SRD-0000" autocomplete="off"><button class="btn primary" data-act="joinCode">Open</button></div>
+  ${S.me.codeErr?`<span class="err">${esc(S.me.codeErr)}</span>`:`<span class="hint">Or scan the QR code at the start point.</span>`}</div>
+  <button class="evcard" data-act="openEvent">${eventArt()}<div class="body"><div style="display:flex;gap:6px"><span class="pill ${cls}">${lbl}</span><span class="pill">Free</span></div>
+  <h3>${esc(g.title)}</h3><span class="ph-sub">${esc(g.type==='instant'?'Instant game · now':'Fri, Jan 29 · 8:00 PM')} · Downtown Provo</span><span class="hint">Sardines · ${g.players.length}/${g.cfg.capacity} players · 18+</span></div></button>
+  <div class="evcard dim" aria-disabled="true"><div class="body"><div style="display:flex;gap:6px"><span class="pill">Coming in V2</span></div><h3>Saturday Showdown</h3><span class="ph-sub">Ticketed individual competition with 1st–3rd place prizes.</span></div></div>`;
+}
+function rulesSummary(){
+  const c=S.g.cfg;
+  const rv={proximity:'Distance clues (no map pin)',continuous:'Shaded hiding area, updates every 30 s',periodic:`Hiding area shown for 45 s every ${c.revealEveryMin} min`}[c.reveal];
+  return `<dl class="kv"><dt>Hiders</dt><dd>${c.hiders} · ${({random:'chosen at random',manual:'picked by organizer',volunteer:'volunteers, organizer approves'})[c.method]}</dd>
+  <dt>Head start</dt><dd>${c.headStart?c.headStartMin+' min':'None'}</dd><dt>Game ends</dt><dd>Everyone finds the group, or ${c.durationMin} min</dd>
+  <dt>Clues</dt><dd>${rv}</dd><dt>A find counts</dt><dd>GPS within ${c.threshold} m + a hider confirms</dd></dl>`;
+}
+function phEvent(){
+  const g=S.g,me=getMe(),m=S.me;let cta;
+  if(me)cta=`<button class="btn primary block" data-act="tab" data-arg="game">Go to game</button>`;
+  else if(['DRAFT','LOBBY'].includes(g.state))cta=`<button class="btn primary block" data-act="startJoin">${m.signedIn?'Join game':'Sign in to join'}</button>${g.state==='DRAFT'?'<span class="hint" style="text-align:center">The lobby opens at 7:45 PM. You can set up your account now.</span>':''}`;
+  else cta=`<div class="banner warn">This game has started. Joining is closed.</div>`;
+  return `<button class="back" data-act="screen" data-arg="browse">‹ Events</button>
+  <div><div class="label-sm">Sardines · Free</div><h2 class="ph-h">${esc(g.title)}</h2><p class="ph-sub">${g.type==='instant'?'Instant game':'Fri, Jan 29 · 8:00 PM'}</p></div>
+  <dl class="kv"><dt>Start point</dt><dd>Center St &amp; University Ave</dd><dt>Boundary</dt><dd>200 N to 100 S, 100 W to 200 E</dd><dt>Players</dt><dd>${g.players.length} of ${g.cfg.capacity}</dd><dt>Check-in</dt><dd>None. Join in the app.</dd></dl>
+  <div class="card"><b>How this game works</b>${rulesSummary()}</div>
+  <div class="card"><b>Safety rules</b><ul class="rules"><li>Walk. No running across streets.</li><li>Stay inside the dashed boundary.</li><li>Do not enter businesses or private property.</li><li>No physical contact or prop weapons.</li><li>Follow organizer instructions in an emergency pause.</li></ul></div>${cta}`;
+}
+function phSignin(){
+  return `<button class="back" data-act="screen" data-arg="event">‹ Back</button><div><h2 class="ph-h">Sign in to play</h2><p class="ph-sub">Quick sign-in. No check-in line at the event.</p></div>
+  <div class="signin" style="display:flex;flex-direction:column;gap:8px">
+  <button class="btn block" data-act="signin" data-arg="Apple"> Continue with Apple</button>
+  <button class="btn block" data-act="signin" data-arg="Google">G&nbsp; Continue with Google</button>
+  <button class="btn block" data-act="signin" data-arg="Phone">☏&nbsp; Continue with phone number</button></div>
+  <p class="hint">Sign-in is mocked in this prototype. Final provider list depends on app store rules.</p>`;
+}
+function phSetup(){
+  const m=S.me,g=S.g;const okAll=m.name.trim()&&m.age&&m.rules&&m.locPerm;
+  const perm=(k,l,d)=>`<button data-act="perm" data-arg="${k}" aria-pressed="${m.locPerm===k}"><b>${l}</b><br><span class="hint">${d}</span></button>`;
+  return `<button class="back" data-act="screen" data-arg="event">‹ Back</button><div><h2 class="ph-h">Set up to play</h2><p class="ph-sub">Signed in with ${esc(m.provider)}.</p></div>
+  <div class="field"><label for="dname">Display name</label><input id="dname" class="input" data-bind="me.name" value="${esc(m.name)}" placeholder="What other players see" maxlength="20" autocomplete="nickname"></div>
+  <label class="check"><input id="ageChk" type="checkbox" data-bind="me.age" ${m.age?'checked':''}><span>I am 18 or older.</span></label>
+  <label class="check"><input id="rulesChk" type="checkbox" data-bind="me.rules" ${m.rules?'checked':''}><span>I read the game and safety rules and agree to follow them.</span></label>
+  <div class="card"><label class="check"><input id="replayChk" type="checkbox" data-bind="me.replay" ${m.replay?'checked':''}><span><b>Include my movement in the game replay</b><br><span class="hint">Optional. Only official organizers can view replays, and they are deleted after 7 days. If you leave this off, your path is never recorded. You can still play and get ranked.</span></span></label></div>
+  <div class="field"><span class="lbl">Location during the game</span><div class="perm">
+  ${perm('always','Always allow','Recommended. Keeps you in the game when your screen locks.')}
+  ${perm('while','Only while using the app','Your location may stop when the screen locks.')}
+  ${perm('denied',"Don't allow","You can join, but finds need organizer review.")}</div></div>
+  <button class="btn primary block" data-act="join" ${okAll&&g.state==='LOBBY'?'':'disabled'}>Join lobby</button>
+  ${!okAll?'<span class="hint" style="text-align:center">Add a name, confirm both boxes and pick a location option.</span>':g.state!=='LOBBY'?'<span class="hint" style="text-align:center">The organizer has not opened the lobby yet.</span>':''}`;
+}
+function phLobby(){
+  const g=S.g,me=getMe(),c=g.cfg;
+  const permTxt={always:['ok','Always allowed'],while:['warn','While using only. Updates may pause when locked.'],denied:['crit','Not allowed. Finds go to organizer review.']}[me.locPerm];
+  let start={manual:'The organizer starts the game.',ready:'Starts when everyone is ready.',scheduled:g.autoStartAt!=null?`Starts automatically in ${mmss(g.autoStartAt-g.now)}.`:'Starts at the scheduled time.'}[c.startMode];
+  return `<div><div class="label-sm">Lobby · <span class="mono">${g.code}</span></div><h2 class="ph-h">You're in, ${esc(me.name)}</h2><p class="ph-sub">${start}</p></div>
+  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>${g.players.length} players</b><span class="hint">Roles are assigned at start</span></div>
+  <div class="avatars">${g.players.map(p=>`<span class="av ${p.isMe?'me':''}" title="${esc(p.name)}">${esc(p.name[0])}</span>`).join('')}</div></div>
+  ${c.startMode==='ready'?`<button class="btn ${me.ready?'':'primary'} block" data-act="ready">${me.ready?'Ready ✓ (tap to undo)':"I'm ready"}</button>`:''}
+  ${c.method==='volunteer'?`<label class="check card" style="flex-direction:row"><input id="volChk" type="checkbox" data-act="volunteer" ${me.volunteer?'checked':''}><span><b>Volunteer to hide</b><br><span class="hint">The organizer picks ${c.hiders} from the volunteers.</span></span></label>`:''}
+  <div class="card"><b>Before you start</b><div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+  <span><span class="pill ${permTxt[0]}">Location</span> ${permTxt[1]}</span>
+  <span><span class="pill ${me.consent?'sea':''}">Replay</span> ${me.consent?'Your path will be in the organizer replay (7 days).':'Not recorded.'}</span>
+  <span><span class="pill ok">Notifications</span> Game alerts on. Safety alerts always on.</span></div></div>
+  <div class="card"><b>Rules</b>${rulesSummary()}</div>`;
+}
+function phGame(){
+  const g=S.g,me=getMe(),c=g.cfg,m=S.me;
+  if(!me)return `<div class="empty">Join a game to see it here.</div>`;
+  if(g.state==='LOBBY')return phLobby();
+  if(g.state==='TERMINATED')return `<div style="margin-top:30px;display:flex;flex-direction:column;gap:12px"><span class="pill crit" style="align-self:flex-start">Stopped</span><h2 class="ph-h">Game ended for safety</h2><p class="ph-sub">The organizer stopped this game. ${g.termReason?esc(g.termReason)+'. ':''}No results were published and location sharing is off.</p><button class="btn block" data-act="reportOpen">Report an incident</button>${incidentForm()}</div>`;
+  if(g.state==='FINISHED')return phResults();
+  if(me.role==='removed')return `<div class="banner crit">An organizer removed you from this game.</div>`;
+  const active=g.state==='ACTIVE';const head=g.headLeft>0;
+  const role=me.initialRole==='hider'?['Hider','lure']:me.role==='hider'?[`Found #${me.foundSeq}`,'lure']:['Seeker','sea'];
+  const [tl,tv]=g.state==='PREPARING'?['Starts in',g.prepLeft+'s']:head?['Head start',mmss(g.headLeft)]:['Time left',mmss(c.durationMin*60-g.clock)];
+  const seekT=g.players.filter(p=>p.initialRole==='seeker'&&p.role!=='removed').length,found=g.players.filter(p=>p.foundSeq!=null).length;
+  // what this player may see
+  let dots=[],circle=null,spot=null;
+  if(active){
+    dots=g.players.filter(p=>p!==me&&p.role!=='removed'&&fresh(p)&&((me.role==='hider'&&(p.role==='hider'||(p.role==='seeker'&&c.hidersSeeSeekers)))||(me.role==='seeker'&&p.role==='seeker'&&c.seekersSeeSeekers)))
+      .map(p=>({x:p.rep.x,y:p.rep.y,role:p.role,title:p.name}));
+    if(me.role==='hider')spot=g.hideSpot;
+    if(me.role==='seeker'&&!head&&(c.reveal==='continuous'||(c.reveal==='periodic'&&g.clock<g.revealUntil)))circle=g.circle;
+  }
+  const veil=g.state==='PAUSED'?'Paused · locations hidden':null;
+  const canTap=active&&!(me.role==='seeker'&&head);
+  const map=mapSVG({tap:canTap,dots,circle,spot,target:m.target&&canTap?m.target:null,me:{x:me.x,y:me.y,role:me.role,stale:me.gpsLost},veil,label:'Your game map'});
+  // clue
+  let clue='';
+  if(g.state==='PAUSED')clue=`<div class="banner warn">Game paused by the organizer. The clock is stopped and player locations are hidden.</div>`;
+  else if(me.role==='seeker'&&head)clue=`<div class="clue"><b>Wait at the start.</b> Hiders are hiding. You are released in ${mmss(g.headLeft)}.</div>`;
+  else if(me.role==='seeker'&&active){
+    if(c.reveal==='proximity'){
+      if(me.gpsLost||!me.rep)clue=`<div class="clue"><b>Clue paused.</b> We need a fresh location fix from your phone.</div>`;
+      else{const d=nearestMemberDist(me.rep);const band=d<30?'Very close: under 30 m':d<75?'Close: 30–75 m':d<150?'Warm: 75–150 m':d<300?'Cool: 150–300 m':'Cold: over 300 m';
+        clue=`<div class="clue"><b>${band}</b> from the hiding group. <span class="hint">Updated ${g.now-me.rep.t}s ago (every 25 s).</span></div>`;}
+    }else if(c.reveal==='continuous')clue=`<div class="clue"><b>Shaded circle</b> = hiding area (about 95 m across). It moves every 30 s.</div>`;
+    else clue=g.clock<g.revealUntil?`<div class="clue"><b>Hiding area visible</b> for ${mmss(g.revealUntil-g.clock)}.</div>`:`<div class="clue"><b>Next reveal</b> in ${mmss(c.revealEveryMin*60-(g.clock-g.lastReveal))}.</div>`;
+  }else if(me.role==='hider')clue=me.initialRole==='hider'?`<div class="clue lure"><b>You're hiding.</b> Get to the fish marker${head?` before the head start ends (${mmss(g.headLeft)})`:''} and stay put. Confirm seekers who reach you.</div>`:`<div class="clue lure"><b>You're in the hiding group.</b> Walk to the fish marker and squeeze in quietly.</div>`;
+  const confirms=g.finds.filter(f=>f.status==='confirming'&&f.confirmerId==='me').map(f=>`<div class="item warn"><div class="top"><b>${esc(f.name)} says they found you</b><span class="pill warn">${mmss(f.deadline-g.now)}</span></div><span class="meta">GPS puts them ${Math.round(f.dist)} m away (±${f.acc} m). Are they with the group?</span><div class="sendrow"><button class="btn lure sm" data-act="confirmFind" data-arg="${f.id}">Yes, they're here</button><button class="btn sm" data-act="denyFind" data-arg="${f.id}">Not here</button></div></div>`).join('');
+  const myFind=g.finds.filter(f=>f.seekerId==='me').slice(-1)[0];
+  let fmsg='';
+  if(me.role==='seeker'&&(m.findMsg||myFind)){
+    if(myFind&&myFind.status==='confirming')fmsg=`<div class="banner ok">GPS check passed. Waiting for a hiding-group member to confirm…</div>`;
+    else if(myFind&&myFind.status==='review')fmsg=`<div class="banner warn">Sent to the organizer for review: ${esc(myFind.reason)}.</div>`;
+    else if(myFind&&myFind.status==='rejected'&&!m.findMsg)fmsg=`<div class="banner crit">The organizer rejected your find. Keep looking.</div>`;
+    else if(m.findMsg==='too-far')fmsg=`<div class="banner warn">GPS doesn't place you within ${c.threshold} m of the hiding group. <button class="back" data-act="askReview">Ask an organizer to review</button></div>`;
+  }
+  const outB=me.out&&active?`<div class="banner crit">You're outside the game boundary. Head back inside the dashed line.</div>`:'';
+  const gpsB=me.gpsLost?`<div class="banner warn">GPS signal lost. Your last location is marked stale and can't be used to prove a find.</div>`:me.locPerm==='while'?`<div class="hint">Location is "while using". Keep the app open for reliable updates.</div>`:'';
+  return `<div class="hud"><div><span class="pill ${role[1]}">${role[0]}</span><div class="hint" style="margin-top:4px">${found}/${seekT} seekers found</div></div><div class="timer"><small>${tl}</small>${tv}</div></div>
+  ${map}${canTap?`<span class="hint" style="margin-top:-8px">Tap the map to walk there.</span>`:''}
+  ${outB}${clue}${confirms}${fmsg}${gpsB}
+  ${me.role==='seeker'&&active&&!head?`<button class="btn primary block" data-act="myFind">I found them · Request find</button>`:''}
+  <button class="btn block" data-act="reportOpen">Report an incident</button>${incidentForm()}
+  <div class="testctl"><span class="label-sm">Test controls (prototype)</span><div class="sendrow"><button class="btn sm" data-act="toggleGps">${me.gpsLost?'Restore GPS':'Simulate GPS loss'}</button><button class="btn sm" data-act="walkOut">Walk out of bounds</button>${me.role==='seeker'&&active&&!head?`<button class="btn sm" data-act="cheatWalk">Walk to hiding spot</button>`:''}</div></div>`;
+}
+function incidentForm(){
+  const m=S.me;if(!m.incOpen)return m.incSent?`<div class="banner ok">Report sent to the organizers.</div>`:'';
+  return `<div class="card"><div class="field"><label for="incCat">What happened?</label><select id="incCat" class="input" data-bind="me.incCat">${['Unsafe area','Injury','Player conduct','Lost or separated','Other'].map(o=>`<option ${m.incCat===o?'selected':''}>${o}</option>`).join('')}</select></div>
+  <div class="field"><label for="incText">Details</label><textarea id="incText" class="input" rows="2" data-bind="me.incText" placeholder="Where are you and what do you need?">${esc(m.incText)}</textarea></div>
+  <div class="sendrow"><button class="btn danger" data-act="reportSend">Send report</button><button class="btn" data-act="reportCancel">Cancel</button></div></div>`;
+}
+function phResults(){
+  const g=S.g,me=getMe(),r=g.results;const mine=r.rows.find(x=>x.p.isMe);
+  const title=mine?`${ord(mine.rank)}${mine.shared?' (shared)':''}`:'Hider';
+  return `<div><div class="label-sm">Game over · ${esc(g.endReason)}</div><h2 class="ph-h">${mine?'You placed '+title:'Thanks for hiding'}</h2>
+  <p class="ph-sub">${mine?esc(mine.basis):'Initial hiders are '+(g.cfg.hiderRank==='top'?'ranked as shared 1st.':'listed separately.')}</p></div>
+  ${r.hiders.length?`<div class="card"><b>Hiders</b><span class="hint">${r.hiders.map(h=>esc(h.name)+(h.isMe?' (you)':'')).join(', ')}</span></div>`:''}
+  <div class="standings">${r.rows.map(x=>`<div class="srow ${x.p.isMe?'me':''}"><span class="rk">${ord(x.rank)}${x.shared?'=':''}</span><span>${esc(x.p.name)}${x.p.isMe?' (you)':''}</span><span class="basis">${esc(x.basis)}</span></div>`).join('')}</div>
+  <span class="hint">“=” marks a shared placement: same closest distance (5 m tolerance) reached at the same time.</span>
+  <button class="btn block" data-act="tab" data-arg="profile">See my profile</button>`;
+}
+function phProfile(){
+  const m=S.me,me=getMe(),g=S.g;
+  const played=1+(g.results&&me?1:0);const mine=g.results&&me?g.results.rows.find(x=>x.p.isMe):null;
+  return `<div style="display:flex;gap:14px;align-items:center"><div class="avatar">${esc((m.name||'?')[0].toUpperCase())}</div><div><h2 class="ph-h" style="font-size:24px">${esc(m.name||'New player')}</h2><p class="ph-sub">Signed in with ${esc(m.provider)} · 18+ confirmed</p></div></div>
+  <div class="stats3"><div class="stat"><b>${played}</b><span>Games joined</span></div><div class="stat"><b>${mine?ord(mine.rank):'6th'}</b><span>${mine?'Latest finish':'Best finish'}</span></div><div class="stat"><b>${me&&me.foundSeq?1:0}</b><span>Times found</span></div></div>
+  <div class="card"><b>History</b><div class="srow"><span class="rk">6th</span><span>Sardines pilot · Dec 4</span><span class="basis">of 15 (example)</span></div>${mine?`<div class="srow me"><span class="rk">${ord(mine.rank)}</span><span>${esc(g.title)}</span><span class="basis">of ${g.results.rows.length}</span></div>`:''}</div>
+  <div class="card"><b>Settings</b>
+  <label class="check"><input id="gnChk" type="checkbox" data-bind="me.gameNotifs" ${m.gameNotifs?'checked':''}><span>Game notifications (countdowns, clues, finds, results)<br><span class="hint">Safety alerts always come through.</span></span></label>
+  ${me?`<label class="check"><input id="consentChk" type="checkbox" data-act="consent" ${me.consent?'checked':''}><span>Include my movement in this game's replay<br><span class="hint">Turning this off deletes any path already recorded.</span></span></label>`:''}</div>
+  <span class="hint">Only non-location stats are kept on your profile.</span>`;
+}
+
+// ---------- organizer ----------
+function renderOrg(){
+  const g=S.g,c=g.cfg;
+  const st=['DRAFT','LOBBY','PREPARING','ACTIVE','PAUSED','FINISHED'];
+  const states=st.map(s=>`<span class="${g.state===s?'on'+(s==='PAUSED'&&g.emergency?' crit':''):''}">${s==='PAUSED'&&g.emergency&&g.state==='PAUSED'?'EMERGENCY PAUSE':s}</span>`).join('<i>→</i>')+`<i>·</i><span class="${g.state==='TERMINATED'?'on crit':''}">TERMINATED</span>`;
+  let act='';
+  if(g.state==='DRAFT')act=`<button class="btn primary" data-act="openLobby">Open lobby</button>`;
+  else if(g.state==='LOBBY')act=`<button class="btn primary" data-act="start">${c.startMode==='manual'?'Start game':'Start now'}</button>`;
+  else if(g.state==='ACTIVE')act=`<button class="btn" data-act="pause">Pause</button><button class="btn danger" data-act="epause">Emergency pause</button><button class="btn" data-act="end">End game</button>`;
+  else if(g.state==='PAUSED')act=`<button class="btn primary" data-act="resume">Resume</button><button class="btn" data-act="end">End game</button>`;
+  else act=`<button class="btn primary" data-act="newGame">New game</button>`;
+  if(['PREPARING','ACTIVE','PAUSED'].includes(g.state))act+=S.ui.confirmTerm?`<button class="btn danger" data-act="terminate">Confirm terminate</button><button class="btn" data-act="termCancel">Cancel</button>`:`<button class="btn ghost-danger" data-act="termAsk">Terminate</button>`;
+  const review=g.finds.filter(f=>f.status==='review').length;
+  const alerts=safetyAlerts().length+g.incidents.filter(i=>i.status==='open').length;
+  const tabs=[['setup','Setup'],['players','Players',g.players.length,'n'],['live','Live map'],['finds','Finds',review],['safety','Safety',alerts],['results','Results & replay'],['audit','Audit log']];
+  const tb=tabs.map(([k,l,n,cl])=>`<button role="tab" aria-selected="${S.ui.orgTab===k}" data-act="orgTab" data-arg="${k}">${l}${n?`<span class="badge ${cl||''}">${n}</span>`:''}</button>`).join('');
+  const body={setup:orgSetup,players:orgPlayers,live:orgLive,finds:orgFinds,safety:orgSafety,results:orgResults,audit:orgAudit}[S.ui.orgTab]();
+  return `<div class="console"><div class="c-head"><div class="c-title"><div class="eyebrow">Organizer console · ${g.type==='instant'?'Instant game':'Scheduled event'} · <span class="mono">${g.code}</span></div><h2>${esc(g.title)}</h2></div><div class="c-actions">${act}</div></div>
+  <div class="states" aria-label="Game state">${states}</div>${S.ui.startErr?`<div class="c-body" style="padding-bottom:0"><span class="err">${esc(S.ui.startErr)}</span></div>`:''}
+  <div class="tabs" role="tablist">${tb}</div><div class="c-body">${body}</div></div>`;
+}
+function orgSetup(){
+  const g=S.g,c=g.cfg,L=locked(),dis=L?'disabled':'';
+  const sel=(k,opts)=>`<select id="cfg-${k}" data-bind="cfg.${k}" ${dis} aria-label="${CFG_LABEL[k]}">${opts.map(([v,l])=>`<option value="${v}" ${String(c[k])===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
+  const num=(k,min,max)=>`<input id="cfg-${k}" type="number" min="${min}" max="${max}" data-bind="cfg.${k}" data-num="1" value="${c[k]}" ${dis} aria-label="${CFG_LABEL[k]}">`;
+  const chk=(k)=>`<input id="cfg-${k}" type="checkbox" data-bind="cfg.${k}" ${c[k]?'checked':''} ${dis} aria-label="${CFG_LABEL[k]}" style="width:18px;height:18px;accent-color:var(--sea)">`;
+  return `${L?`<div class="lock"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Rules v${g.rulesVersion} locked at ${g.lockedAt}. Pause, player management and safety controls stay available.</div>`:''}
+  <div class="joinbox">${qrSVG(g.code)}<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="label-sm">Join code</span><span class="code">${g.code}</span><span class="hint">${g.state==='DRAFT'?'Players can join once you open the lobby.':'Lobby is open to join with this code or QR.'}</span></div>
+  <div style="margin-left:auto" class="seg" role="group" aria-label="Event type"><button data-act="evType" data-arg="scheduled" aria-pressed="${g.type==='scheduled'}" ${dis}>Scheduled</button><button data-act="evType" data-arg="instant" aria-pressed="${g.type==='instant'}" ${dis}>Instant</button></div></div>
+  <div class="formgrid">
+  <fieldset><legend>Hiders</legend><div class="row"><span>Initial hiders</span>${num('hiders',1,5)}</div><div class="row"><span>Selection</span>${sel('method',[['random','Random'],['manual','Organizer picks'],['volunteer','Volunteers, I approve']])}</div>
+  <div class="row"><span>Head start</span>${chk('headStart')}</div>${c.headStart?`<div class="row"><span>Head start (min)</span>${num('headStartMin',1,10)}</div>`:''}</fieldset>
+  <fieldset><legend>Start and finish</legend><div class="row"><span>Start method</span>${sel('startMode',[['manual','Manual'],['ready','When all ready'],['scheduled','Scheduled time']])}</div>
+  <div class="row"><span>Time limit (min)</span>${num('durationMin',5,60)}</div><span class="hint">Ends when every seeker has joined the hiding group or time runs out, whichever comes first.</span>
+  <div class="row"><span>Min players</span>${num('minPlayers',2,50)}</div><div class="row"><span>Capacity</span>${num('capacity',2,50)}</div></fieldset>
+  <fieldset><legend>GPS reveal and visibility</legend><div class="row"><span>Seekers get</span>${sel('reveal',[['proximity','Distance clues'],['continuous','Live hiding area'],['periodic','Periodic reveals']])}</div>
+  ${c.reveal==='periodic'?`<div class="row"><span>Reveal every (min)</span>${num('revealEveryMin',1,10)}</div>`:''}
+  <div class="row"><span>Seekers see other seekers</span>${chk('seekersSeeSeekers')}</div><div class="row"><span>Hiding group sees seekers</span>${chk('hidersSeeSeekers')}</div>
+  <span class="hint">Location is collected every 25 s. Nobody sees other players unless the game is active.</span></fieldset>
+  <fieldset><legend>Find verification</legend><div class="row"><span>Find radius</span>${sel('threshold',[[10,'10 m'],[15,'15 m'],[25,'25 m'],[40,'40 m']])}</div>
+  <div class="row"><span>GPS accuracy limit</span>${sel('accuracyMax',[[10,'±10 m'],[20,'±20 m'],[30,'±30 m']])}</div>
+  <span class="hint">GPS proximity check, then any hiding-group member confirms. Inaccurate or disputed finds come to you for review.</span></fieldset>
+  <fieldset><legend>Scoring <span class="tag-open">Pilot setting</span></legend>
+  <div class="row"><span>Unfinished seekers measured to</span>${sel('distRef',[['origin','Original hiding spot'],['nearest','Nearest group member']])}</div>
+  <div class="row"><span>Initial hiders</span>${sel('hiderRank',[['separate','Listed separately'],['top','Shared 1st place']])}</div>
+  <span class="hint">These two rules are open in the PRD. Compare them during pilots.</span></fieldset></div>`;
+}
+function playerStatus(p){
+  const g=S.g;
+  if(p.role==='removed')return '<span class="pill">Removed</span>';
+  if(p.gpsLost)return '<span class="pill crit">GPS lost</span>';
+  if(p.out)return '<span class="pill crit">Out of bounds</span>';
+  if(['ACTIVE','PAUSED'].includes(g.state)&&p.rep&&!fresh(p))return '<span class="pill warn">Stale</span>';
+  if(p.locPerm==='denied')return '<span class="pill crit">No permission</span>';
+  if(p.locPerm==='while')return '<span class="pill warn">While using</span>';
+  return '<span class="pill ok">OK</span>';
+}
+function roleCell(p){
+  if(p.role==='removed')return '—';
+  if(p.initialRole==='hider')return '<span class="pill lure">Hider</span>';
+  if(p.foundSeq!=null)return `<span class="pill lure">Found #${p.foundSeq}</span>`;
+  return S.g.state==='DRAFT'||S.g.state==='LOBBY'?'<span class="hint">At start</span>':'<span class="pill sea">Seeker</span>';
+}
+function orgPlayers(){
+  const g=S.g,c=g.cfg;if(!g.players.length)return `<div class="empty">${g.state==='DRAFT'?'Open the lobby to let players join.':'No players yet.'}</div>`;
+  const picking=g.state==='LOBBY'&&c.method!=='random';
+  const rows=g.players.map(p=>`<tr class="${p.isMe?'me':''}"><td><b>${esc(p.name)}</b>${p.isMe?' <span class="hint">(your phone)</span>':''}</td><td>${roleCell(p)}</td><td>${playerStatus(p)}</td>
+    <td>${g.state==='LOBBY'?(c.startMode==='ready'?(p.ready?'Ready':'<span class="hint">Not yet</span>'):'—'):'—'}</td>
+    <td>${c.method==='volunteer'?(p.volunteer?'Volunteered':'—'):'—'}</td><td>${p.consent?'Opted in':'<span class="hint">Off</span>'}</td>
+    <td>${picking?`<label class="check" style="align-items:center"><input type="checkbox" id="pick-${p.id}" data-act="pick" data-arg="${p.id}" ${g.picks.includes(p.id)?'checked':''} ${c.method==='volunteer'&&!p.volunteer?'disabled':''}>Hider</label>`:''}
+    ${p.role!=='removed'&&!['FINISHED','TERMINATED'].includes(g.state)?` <button class="btn sm" data-act="remove" data-arg="${p.id}">Remove</button>`:''}</td></tr>`).join('');
+  const picksInfo=picking?`<div class="banner ${g.picks.length===c.hiders?'ok':'warn'}">Picked ${g.picks.length} of ${c.hiders} hider${c.hiders>1?'s':''}${c.method==='volunteer'?' from volunteers':''}.</div>`:'';
+  return `${picksInfo}<div class="tbl-wrap"><table><thead><tr><th>Player</th><th>Role</th><th>Location</th><th>Ready</th><th>Volunteer</th><th>Replay</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function orgMap(trails){
+  const g=S.g;const showPos=['ACTIVE','PAUSED','PREPARING'].includes(g.state);
+  const dots=showPos?g.players.filter(p=>p.rep&&p.role!=='removed').map(p=>({x:p.rep.x,y:p.rep.y,role:p.role,stale:!fresh(p),acc:p.rep.acc,alert:p.gpsLost||p.out,label:p.isMe?'You':null,title:`${p.name} · ±${p.rep.acc} m · ${g.now-p.rep.t}s ago`})):[];
+  return mapSVG({dots,spot:g.hideSpot&&!['DRAFT','LOBBY'].includes(g.state)?g.hideSpot:null,trails,label:'Organizer map',veil:!showPos&&!trails?(g.state==='DRAFT'||g.state==='LOBBY'?'Locations appear when play starts':'Live locations cleared'):null});
+}
+function orgLive(){
+  const g=S.g,c=g.cfg;
+  const seekT=g.players.filter(p=>p.initialRole==='seeker'&&p.role!=='removed').length,found=g.players.filter(p=>p.foundSeq!=null).length;
+  const clock=g.state==='PREPARING'?`${g.prepLeft}s`:g.headLeft>0?mmss(g.headLeft):mmss(c.durationMin*60-g.clock);
+  const fr=g.players.filter(p=>p.rep&&p.role!=='removed');const avgAge=fr.length?Math.round(fr.reduce((a,p)=>a+(g.now-p.rep.t),0)/fr.length):0;
+  return `<div class="live"><div style="display:flex;flex-direction:column;gap:10px;min-width:0">${orgMap()}
+  <div class="legend"><span><i class="dot" style="color:var(--sea)"></i>Seeker</span><span><i class="dot" style="color:var(--lure)"></i>Hiding group</span><span>◌ Stale fix</span><span style="color:var(--crit)">○ Alert</span><span>Fish = hiding spot · S = start</span></div>
+  ${g.state==='PAUSED'?'<div class="banner warn">Players cannot see each other while paused. This organizer view stays on for safety.</div>':''}</div>
+  <div class="side"><div class="kpis"><div class="kpi"><span>${g.headLeft>0?'Head start':g.state==='PREPARING'?'Starts in':'Time left'}</span><b>${['ACTIVE','PAUSED','PREPARING'].includes(g.state)?clock:'—'}</b></div><div class="kpi"><span>Found</span><b>${found}/${seekT||0}</b></div>
+  <div class="kpi"><span>Avg fix age</span><b>${fr.length?avgAge+'s':'—'}</b></div><div class="kpi"><span>Alerts</span><b style="color:${safetyAlerts().length?'var(--crit)':'inherit'}">${safetyAlerts().length}</b></div></div>
+  <div class="field"><label for="announce">Message all players</label><textarea id="announce" class="input" rows="2" data-bind="ui.announce" placeholder="e.g. 5 minutes left. Stay off 100 N.">${esc(S.ui.announce)}</textarea>
+  <label class="check"><input id="safetyMsg" type="checkbox" data-bind="ui.safetyMsg" ${S.ui.safetyMsg?'checked':''}><span>Send as safety notice (ignores notification settings)</span></label>
+  <button class="btn primary" data-act="announce" ${S.ui.announce.trim()?'':'disabled'}>Send</button></div>
+  <div><div class="label-sm" style="margin-bottom:6px">Recent finds</div>${g.finds.filter(f=>f.status==='verified').slice(-5).reverse().map(f=>`<div class="hint">${f.wall} · <b style="color:var(--ink)">${esc(f.name)}</b> · ${esc(f.how)}</div>`).join('')||'<span class="hint">None yet.</span>'}</div></div></div>`;
+}
+function orgFinds(){
+  const g=S.g;const rev=g.finds.filter(f=>f.status==='review');const conf=g.finds.filter(f=>f.status==='confirming');const done=g.finds.filter(f=>['verified','rejected'].includes(f.status)).slice().reverse();
+  const reviewable=['ACTIVE','PAUSED'].includes(g.state);
+  return `<div><h3 class="h3">Needs review (${rev.length})</h3><p class="hint">Inaccurate, stale or disputed finds. An override needs a reason and is logged.</p>
+  <div class="list">${rev.map(f=>`<div class="item warn"><div class="top"><b>${esc(f.name)}</b><span class="meta">${f.wall} · game ${mmss(f.at)}</span></div>
+  <span>${esc(f.reason)}</span><span class="meta">${f.dist!=null?`GPS distance ${Math.round(f.dist)} m · accuracy ±${f.acc} m · radius ${g.cfg.threshold} m`:'No usable location'}</span>
+  <div class="sendrow"><input class="input" id="reason-${f.id}" data-bind="ui.reasons.${f.id}" value="${esc(S.ui.reasons[f.id]||'')}" placeholder="Reason (required to approve)"><button class="btn lure" data-act="approve" data-arg="${f.id}" ${(S.ui.reasons[f.id]||'').trim()&&reviewable?'':'disabled'}>Approve find</button><button class="btn" data-act="reject" data-arg="${f.id}" ${reviewable?'':'disabled'}>Reject</button></div></div>`).join('')||'<div class="empty">Nothing to review.</div>'}</div></div>
+  <div><h3 class="h3">Waiting for hider confirmation (${conf.length})</h3><div class="list" style="margin-top:8px">${conf.map(f=>`<div class="hint">${f.wall} · <b style="color:var(--ink)">${esc(f.name)}</b> · ${Math.round(f.dist)} m (±${f.acc} m) · asked ${esc(g.players.find(p=>p.id===f.confirmerId)?.name||'')}</div>`).join('')||'<span class="hint">None.</span>'}</div></div>
+  <div><h3 class="h3">History</h3><div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Time</th><th>Seeker</th><th>Result</th><th>How</th></tr></thead><tbody>${done.map(f=>`<tr><td class="num">${f.wall}</td><td>${esc(f.name)}</td><td>${f.status==='verified'?'<span class="pill ok">Verified</span>':'<span class="pill crit">Rejected</span>'}</td><td>${esc(f.how||f.reason)}</td></tr>`).join('')||'<tr><td colspan="4" class="hint">No finds yet.</td></tr>'}</tbody></table></div></div>`;
+}
+function safetyAlerts(){
+  const g=S.g;if(!['ACTIVE','PAUSED','PREPARING'].includes(g.state))return [];
+  const a=[];g.players.forEach(p=>{if(p.role==='removed')return;
+    if(p.gpsLost)a.push({p,lvl:'crit',t:'GPS signal lost',d:p.rep?`Last fix ${g.now-p.rep.t}s ago, ±${p.rep.acc} m.`:'No fix yet.'});
+    else if(p.out)a.push({p,lvl:'crit',t:'Outside the boundary',d:'Player was warned in the app.'});
+    else if(p.rep&&!fresh(p))a.push({p,lvl:'warn',t:'Location stale',d:`No update for ${g.now-p.rep.t}s.`});});
+  return a;
+}
+function orgSafety(){
+  const g=S.g;const al=safetyAlerts();const inc=g.incidents.slice().reverse();
+  return `<div class="sendrow">${g.state==='ACTIVE'?'<button class="btn danger" data-act="epause">Emergency pause</button>':''}${['PREPARING','ACTIVE','PAUSED'].includes(g.state)?(S.ui.confirmTerm?'<button class="btn danger" data-act="terminate">Confirm terminate</button><button class="btn" data-act="termCancel">Cancel</button>':'<button class="btn ghost-danger" data-act="termAsk">Terminate game</button>'):''}
+  <span class="hint" style="align-self:center">Both stop player-to-player location sharing immediately and alert every player.</span></div>
+  <div><h3 class="h3">Live alerts (${al.length})</h3><div class="list" style="margin-top:8px">${al.map(x=>`<div class="item ${x.lvl}"><div class="top"><b>${esc(x.p.name)} · ${x.t}</b><span class="pill ${x.lvl}">${x.lvl==='crit'?'Alert':'Watch'}</span></div><span class="meta">${x.d}</span></div>`).join('')||'<div class="empty">No GPS or boundary alerts.</div>'}</div></div>
+  <div><h3 class="h3">Incident reports (${inc.length})</h3><div class="list" style="margin-top:8px">${inc.map(i=>`<div class="item ${i.status==='open'?'crit':''}"><div class="top"><b>${esc(i.cat)} · from ${esc(i.from)}</b><span class="meta">${i.wall}</span></div><span>${esc(i.text||'No details given.')}</span>${i.status==='open'?`<button class="btn sm" style="align-self:flex-start" data-act="resolveInc" data-arg="${i.id}">Mark handled</button>`:'<span class="pill ok" style="align-self:flex-start">Handled</span>'}</div>`).join('')||'<div class="empty">No incidents reported.</div>'}</div></div>`;
+}
+function orgResults(){
+  const g=S.g;const live=['ACTIVE','PAUSED'].includes(g.state);
+  if(g.state==='TERMINATED')return `<div class="banner crit">Game terminated${g.termReason?': '+esc(g.termReason):''}. No results were published.</div>`+replayBlock();
+  if(!g.results&&!live)return `<div class="empty">Standings appear once the game is running.</div>`;
+  const r=g.results||computeResults();
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3 class="h3">${g.results?'Final standings':'Provisional standings'}</h3><span class="hint">${g.results?esc(g.endReason)+' · ':''}Found order first, then closest valid distance (${g.cfg.distRef==='origin'?'to original hiding spot':'to nearest group member'}), then earliest time, then shared.</span></div>
+  ${r.hiders.length?`<div class="banner ok">Initial hiders (unranked): ${r.hiders.map(h=>esc(h.name)).join(', ')}</div>`:''}
+  <div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Player</th><th>Outcome</th><th>Basis</th></tr></thead><tbody>${r.rows.map(x=>`<tr class="${x.p.isMe?'me':''}"><td class="num">${ord(x.rank)}${x.shared?' <span class="pill warn">Tie</span>':''}</td><td>${esc(x.p.name)}</td><td>${x.p.initialRole==='hider'?'Hider':x.p.foundSeq!=null?'Found':'Not found'}</td><td>${esc(x.basis)}</td></tr>`).join('')}</tbody></table></div>`+replayBlock();
+}
+function replayBlock(){
+  const g=S.g;const cons=g.players.filter(p=>p.consent&&p.role!=='removed');
+  if(['DRAFT','LOBBY'].includes(g.state))return '';
+  const trails=S.ui.showTrails?cons.map(p=>({pts:p.trail,color:p.initialRole==='hider'?'var(--lure)':'var(--sea)'})):null;
+  return `<div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3 class="h3">Replay · organizers only</h3>
+  <label class="check" style="align-items:center"><input id="trailChk" type="checkbox" data-bind="ui.showTrails" ${S.ui.showTrails?'checked':''}>Show paths</label></div>
+  <span class="hint">${cons.length} of ${g.players.length} players opted in. Players who opted out have no recorded path at all. Replay data is deleted automatically on Feb 5, 2027 (7 days after the game).</span>
+  ${mapSVG({trails:trails||[],spot:g.hideSpot,label:'Replay map'})}</div>`;
+}
+function orgAudit(){return `<div class="audit">${S.g.audit.slice().reverse().map(a=>`<div><span class="mono hint">${a.t}</span><span class="who hint">${esc(a.who)}</span><span>${esc(a.what)}</span></div>`).join('')}</div>`;}
+
+// ---------- top + guide ----------
+function guide(){
+  const g=S.g,m=S.me,me=getMe();
+  if(g.state==='DRAFT')return m.signedIn?'Organizer: open the lobby so your phone can join.':'Organizer: review the rules and open the lobby. Player: tap the event and sign in.';
+  if(g.state==='LOBBY'){if(!me)return 'Player: finish setup on the phone and join the lobby.';
+    if(g.cfg.method!=='random'&&g.picks.length!==g.cfg.hiders)return 'Organizer: pick hiders on the Players tab, then start.';
+    return g.cfg.startMode==='manual'?'Organizer: press Start game when enough players have joined.':g.cfg.startMode==='ready'?'Player: tap "I\'m ready". The game starts when everyone is ready.':'The game starts automatically at the scheduled time.';}
+  if(g.state==='PREPARING')return 'Roles are assigned and rules are locked. Play begins after the countdown.';
+  if(g.state==='ACTIVE'){if(!me)return 'Watch the live map. Try Pause or Emergency pause.';
+    if(me.role==='seeker')return g.headLeft>0?'Seekers wait at the start during the head start. Try sim speed 30×.':'Tap the phone map to walk. Follow the clue, then Request find near the hiding group.';
+    return 'You are in the hiding group. Confirm seekers who find you. Try the Finds and Safety tabs.';}
+  if(g.state==='PAUSED')return 'Location sharing is off while paused. Resume when ready.';
+  if(g.state==='FINISHED')return 'Results are in. Check standings on both screens and the opted-in replay.';
+  return 'Game terminated. Start a new game to try again.';
+}
+function renderTop(){
+  document.getElementById('guide').innerHTML=`<b>Next</b><span>${esc(guide())}</span>`;
+  document.getElementById('simctl').innerHTML=`<span class="label-sm">Sim speed</span><div class="seg" role="group" aria-label="Simulation speed">${[1,5,10,30].map(v=>`<button data-act="speed" data-arg="${v}" aria-pressed="${S.speed===v}">${v}×</button>`).join('')}</div><button class="btn sm" data-act="reset">Reset</button>`;
+  document.getElementById('paneSwitch').innerHTML=`<button data-act="pane" data-arg="player" aria-pressed="${S.pane==='player'}">Player phone</button><button data-act="pane" data-arg="organizer" aria-pressed="${S.pane==='organizer'}">Organizer console</button>`;
+  document.getElementById('stage').dataset.pane=S.pane;
+}
+
+// ---------- render loop with focus/scroll preservation ----------
+function render(force){
+  const ae=document.activeElement;
+  if(!force&&(S.hold||(ae&&ae.tagName==='SELECT')))return;
+  const focusId=ae&&ae.id&&['INPUT','TEXTAREA','SELECT','BUTTON'].includes(ae.tagName)?ae.id:null;
+  let sel=null;try{if(focusId&&ae.selectionStart!=null)sel=[ae.selectionStart,ae.selectionEnd];}catch(e){}
+  const scrolls={};document.querySelectorAll('[data-scroll]').forEach(el=>scrolls[el.id]=el.scrollTop);
+  document.documentElement.style.setProperty('--clock',`-${(performance.now()/1000).toFixed(3)}s`);
+  renderTop();
+  document.getElementById('player').innerHTML=renderPhone();
+  document.getElementById('org').innerHTML=renderOrg();
+  Object.entries(scrolls).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.scrollTop=v;});
+  if(focusId){const el=document.getElementById(focusId);if(el){el.focus({preventScroll:true});if(sel)try{el.setSelectionRange(sel[0],sel[1]);}catch(e){}}}
+}
+
+// ---------- actions ----------
+function setBind(path,val){
+  const [root,...rest]=path.split('.');
+  let obj=root==='cfg'?S.g.cfg:root==='me'?S.me:S.ui;
+  for(let i=0;i<rest.length-1;i++){obj=obj[rest[i]];}
+  const k=rest[rest.length-1];
+  if(root==='cfg'){
+    if(locked())return;
+    const old=obj[k];
+    if(typeof DEFAULT_CFG[k]==='number'){val=Number(val);if(!isFinite(val))return;}
+    if(old===val)return;obj[k]=val;
+    if(k==='hiders'||k==='method')S.g.picks=[];
+    if(k==='startMode'&&S.g.state==='LOBBY')S.g.autoStartAt=val==='scheduled'?S.g.now+150:null;
+    S.g.rulesVersion++;audit(`Rules v${S.g.rulesVersion}: ${CFG_LABEL[k]} → ${typeof val==='boolean'?(val?'on':'off'):val}`);
+    return;
+  }
+  obj[k]=val;
+  if(root==='me'&&k==='codeIn')S.me.codeErr='';
+}
+const ACTS={
+  speed:a=>{S.speed=+a;}, reset:()=>reset(), pane:a=>{S.pane=a;},
+  tab:a=>{S.me.tab=a;if(a==='events'&&!['browse','event','signin','setup'].includes(S.me.screen))S.me.screen='browse';},
+  screen:a=>{S.me.screen=a;S.me.tab='events';},
+  openEvent:()=>{S.me.screen='event';},
+  joinCode:()=>{const v=S.me.codeIn.trim().toUpperCase();if(v===S.g.code||v===S.g.code.replace('-','')){S.me.screen='event';S.me.codeErr='';}else S.me.codeErr=v?'No game found with that code. Check with your organizer.':'Enter the code from the organizer.';},
+  startJoin:()=>{S.me.screen=S.me.signedIn?'setup':'signin';},
+  signin:a=>{S.me.signedIn=true;S.me.provider=a;S.me.screen='setup';},
+  perm:a=>{S.me.locPerm=a;},
+  join:()=>{const m=S.me;if(getMe()||S.g.state!=='LOBBY')return;const p=addPlayer(m.name.trim(),true);p.ready=false;m.tab='game';notify(`Joined ${S.g.title}. Watch for the countdown.`,'account');},
+  ready:()=>{const me=getMe();if(me)me.ready=!me.ready;},
+  volunteer:()=>{const me=getMe();if(me){me.volunteer=!me.volunteer;if(!me.volunteer)S.g.picks=S.g.picks.filter(x=>x!=='me');}},
+  consent:()=>{const me=getMe();if(!me)return;me.consent=!me.consent;S.me.replay=me.consent;if(!me.consent){me.trail=[];audit(`${me.name} withdrew replay consent. Recorded path deleted.`,'System');}},
+  mapTap:(a,el,e)=>{const svg=e.target.closest('svg');if(!svg)return;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());S.me.target={x:Math.max(75,Math.min(825,q.x)),y:Math.max(22,Math.min(618,q.y))};},
+  myFind:()=>{const me=getMe();if(!me)return;const f=requestFind(me);S.me.findMsg=f.status==='too-far'?'too-far':null;},
+  askReview:()=>{const me=getMe();const g=S.g;g.finds.push({id:++g.fid,seekerId:'me',name:me.name,at:g.clock,wall:wall(),dist:me.rep?nearestMemberDist(me.rep):null,acc:me.rep?.acc,status:'review',reason:'Player asked for review after failing the GPS check',how:''});S.me.findMsg=null;},
+  confirmFind:a=>{const f=S.g.finds.find(x=>x.id==a);if(f&&f.status==='confirming')verify(f,`Confirmed by ${getMe().name}`);},
+  denyFind:a=>{const f=S.g.finds.find(x=>x.id==a);if(f&&f.status==='confirming'){f.status='review';f.reason=`${getMe().name} (hiding group) said "not here"`;}},
+  toggleGps:()=>{const me=getMe();me.gpsLost=!me.gpsLost;if(!me.gpsLost)sample(me);else{notify('GPS signal lost. Move toward open sky. You stay in the game during the grace period.','safety');}},
+  walkOut:()=>{S.me.target={x:B.x1+18,y:getMe().y};},
+  cheatWalk:()=>{const h=S.g.hideSpot;S.me.target={x:h.x+6,y:h.y+5};},
+  reportOpen:()=>{S.me.incOpen=true;S.me.incSent=false;S.me.tab=getMe()?'game':S.me.tab;},
+  reportCancel:()=>{S.me.incOpen=false;},
+  reportSend:()=>{const g=S.g,m=S.me;g.incidents.push({id:++g.iid,from:getMe()?.name||m.name,cat:m.incCat,text:m.incText.trim(),wall:wall(),status:'open'});audit(`Incident reported by ${getMe()?.name}: ${m.incCat}`,'System');m.incOpen=false;m.incSent=true;m.incText='';notify('Report sent. An organizer has been alerted.','safety');},
+  orgTab:a=>{S.ui.orgTab=a;},
+  evType:a=>{if(locked())return;S.g.type=a;audit(`Event type set to ${a}`);},
+  openLobby:()=>openLobby(),
+  start:()=>startGame(false),
+  pick:a=>{const g=S.g,n=g.cfg.hiders;if(g.picks.includes(a))g.picks=g.picks.filter(x=>x!==a);else{g.picks.push(a);if(g.picks.length>n)g.picks.shift();}S.ui.startErr=null;},
+  remove:a=>{const g=S.g;const p=g.players.find(x=>x.id===a);if(!p)return;
+    if(g.state==='LOBBY'){g.players=g.players.filter(x=>x!==p);g.picks=g.picks.filter(x=>x!==a);}else{p.role='removed';g.finds.forEach(f=>{if(f.seekerId===a&&['confirming','review'].includes(f.status))f.status='rejected';});}
+    audit(`Removed ${p.name} from the game`);if(p.isMe&&g.state==='LOBBY'){S.me.tab='events';S.me.screen='event';}
+    if(['ACTIVE','PAUSED'].includes(g.state)&&!seekersLeft().length)finish('All seekers found');},
+  pause:()=>{S.g.state='PAUSED';S.g.emergency=false;audit('Paused game');notify('Game paused by the organizer. Location sharing is off.','game');},
+  epause:()=>{S.g.state='PAUSED';S.g.emergency=true;audit('EMERGENCY PAUSE');notify('EMERGENCY PAUSE: stop where you are and wait for instructions.','safety');S.ui.orgTab='safety';},
+  resume:()=>{S.g.state='ACTIVE';const e=S.g.emergency;S.g.emergency=false;audit(e?'Resumed after emergency pause':'Resumed game');notify('Game resumed. Location sharing is back on.','game');},
+  end:()=>finish('Ended by organizer'),
+  termAsk:()=>{S.ui.confirmTerm=true;},termCancel:()=>{S.ui.confirmTerm=false;},
+  terminate:()=>{const g=S.g;g.state='TERMINATED';g.emergency=false;g.termReason='Stopped by organizer for safety';S.ui.confirmTerm=false;audit('TERMINATED game for safety. No results published.');notify('This game has been stopped for safety. Location sharing is off.','safety');},
+  newGame:()=>{const keep={signedIn:S.me.signedIn,provider:S.me.provider,name:S.me.name,age:S.me.age,rules:S.me.rules,replay:S.me.replay,locPerm:S.me.locPerm};reset();Object.assign(S.me,keep);},
+  announce:()=>{const t=S.ui.announce.trim();if(!t)return;notify(`Organizer: ${t}`,S.ui.safetyMsg?'safety':'game');audit(`${S.ui.safetyMsg?'Safety notice':'Announcement'}: "${t}"`);S.ui.announce='';},
+  approve:a=>{const f=S.g.finds.find(x=>x.id==a);const r=(S.ui.reasons[a]||'').trim();if(!f||!r)return;audit(`Override: approved find for ${f.name} (${r})`);verify(f,`Organizer override: ${r}`);},
+  reject:a=>{const f=S.g.finds.find(x=>x.id==a);if(!f)return;f.status='rejected';f.how=`Rejected by organizer${S.ui.reasons[a]?': '+S.ui.reasons[a]:''}`;audit(`Rejected find for ${f.name}`);if(f.seekerId==='me')S.me.findMsg=null;},
+  resolveInc:a=>{const i=S.g.incidents.find(x=>x.id==a);if(i){i.status='handled';audit(`Marked incident #${i.id} handled`);}},
+};
+document.addEventListener('pointerdown',e=>{if(e.target.closest('button,[data-act],label,input,select,textarea'))S.hold=true;},true);
+document.addEventListener('pointerup',()=>setTimeout(()=>{S.hold=false;},0),true);
+document.addEventListener('pointercancel',()=>{S.hold=false;},true);
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el||el.disabled)return;
+  const fn=ACTS[el.dataset.act];if(!fn)return;
+  fn(el.dataset.arg,el,e);S.hold=false;render(true);
+});
+document.addEventListener('input',e=>{
+  const el=e.target;if(!el.dataset||!el.dataset.bind)return;
+  setBind(el.dataset.bind,el.type==='checkbox'?el.checked:el.value);
+  if(el.tagName==='SELECT'||el.type==='checkbox'){el.blur&&el.tagName==='SELECT'&&el.blur();render(true);}
+  else if(el.dataset.num)render(true);
+  else if(['me.name','ui.announce'].includes(el.dataset.bind)||el.dataset.bind.startsWith('ui.reasons'))render(true);
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='codeIn'){ACTS.joinCode();render(true);}});
+
+// ---------- boot ----------
+function start(){
+  reset();render(true);
+  let acc=0,last=performance.now();
+  setInterval(()=>{const t=performance.now();acc+=(t-last)/1000*S.speed;last=t;let n=0;while(acc>=1&&n<60){sec();acc-=1;n++;}render(false);},250);
+}
+start();
+</script>

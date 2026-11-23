@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Nite Organizer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231A1D21'/><text x='16' y='22' font-family='Arial Black,Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%234FD8FF'>GN</text></svg>">
+<style>
+:root{
+  --bg:#1A1D21; --surface:#22262B; --surface-2:#2A2F35; --ink:#E6EAEE; --muted:#97A1AB; --line:#363C43;
+  --neon:#4FD8FF; --ice:#9BE9FF; --neon-soft:#163440; --cta:#FFFFFF; --cta-ink:#15181B;
+  --ok:#3FD68A; --warn:#F2B84B; --crit:#FF5F5F;
+  --flow:linear-gradient(110deg,var(--neon) 0%,var(--ice) 25%,var(--cta) 50%,var(--ice) 75%,var(--neon) 100%);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--neon);outline-offset:2px}
+.wrap{max-width:1200px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left))}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.logo{font-weight:900;font-size:28px;letter-spacing:-.02em;font-stretch:expanded;background:var(--flow);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite}
+.tag{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+header .who{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--muted)}
+@keyframes flow{from{background-position:0% 50%}to{background-position:-200% 50%}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+.btn:hover:not(:disabled){border-color:var(--neon)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.cta{background:var(--flow);background-size:200% 100%;animation:flow 6s linear infinite;color:var(--cta-ink);border-color:rgba(255,255,255,.55);box-shadow:0 6px 22px -6px rgba(79,216,255,.75)}
+.btn.cta:disabled{animation:none;background:var(--surface-2);color:var(--muted);box-shadow:none}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.glow{border:2px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--flow) border-box;background-size:100% 100%,200% 100%;animation:edge 7s linear infinite;box-shadow:0 10px 34px -12px rgba(79,216,255,.6)}
+@keyframes edge{from{background-position:0 0,0% 50%}to{background-position:0 0,-200% 50%}}
+.grid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:600}
+h3{margin:0;font-size:22px;font-weight:800}
+.list{display:flex;flex-direction:column;gap:8px}
+.gitem{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.gitem[aria-current="true"]{border-color:var(--neon);background:var(--neon-soft)}
+.gitem small{color:var(--muted)}
+.pill{display:inline-flex;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok);background:rgba(63,214,138,.14)} .pill.warn{color:var(--warn);background:rgba(242,184,75,.14)}
+.pill.neon{color:var(--neon);background:rgba(79,216,255,.14)} .pill.crit{color:var(--crit);background:rgba(255,95,95,.14)}
+.states{display:flex;flex-wrap:wrap;gap:4px;margin:12px 0}
+.states span{font-size:11px;font-weight:700;letter-spacing:.05em;padding:4px 8px;border-radius:6px;background:var(--surface-2);color:var(--muted)}
+.states span.on{background:var(--neon);color:var(--cta-ink)}
+.states span.on.crit{background:var(--crit);color:#fff}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sp{flex:1}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:16px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);font-size:13px}
+th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--line)}
+.dot.on{background:var(--ok)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+input[type=text],input[type=email],input[type=number],input[type=datetime-local],select{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0;width:100%}
+input:focus,select:focus{border-color:var(--neon);outline:none}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.code{font:700 28px ui-monospace,Menlo,monospace;color:var(--neon);letter-spacing:.04em}
+.qr{background:#fff;border-radius:10px;padding:8px;width:132px;height:132px}
+.qr svg{width:100%;height:100%;display:block}
+.muted{color:var(--muted)}
+.err{color:var(--crit);font-size:13px;min-height:1em}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--neon);padding:10px 14px;border-radius:12px;max-width:min(520px,92vw);z-index:9}
+.center{max-width:420px;margin:12vh auto 0}
+.mega{font-weight:900;font-size:clamp(56px,16vw,110px);line-height:.86;letter-spacing:-.04em;margin:0 0 18px;background:var(--flow);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;filter:drop-shadow(0 0 14px rgba(79,216,255,.45))}
+.log li{padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.log{list-style:none;padding:0;margin:0;max-height:280px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="muted">Loading…</p></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

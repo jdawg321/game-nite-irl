@@ -1,0 +1,8 @@
+.DS_Store
+ios/build/
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.vercel
+.env*
+supabase/.temp/
