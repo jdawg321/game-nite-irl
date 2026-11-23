@@ -145,7 +145,7 @@ struct RoleRevealView: View {
     let game: Game
     @Environment(AppState.self) private var app
 
-    private var isHider: Bool { app.me?.role == .hider }
+    private var isHider: Bool { app.myRole == .hider }
 
     var body: some View {
         VStack(spacing: 18) {

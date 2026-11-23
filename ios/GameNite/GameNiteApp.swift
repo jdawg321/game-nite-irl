@@ -56,6 +56,11 @@ struct RootView: View {
                         .tabItem { Label("Game", systemImage: "location.north.circle") }
                         .tag(AppState.Tab.game)
                         .badge(app.current != nil && !(app.current?.status.isOver ?? true) ? "•" : nil)
+                    if app.isOrganizer {
+                        OrganizeView()
+                            .tabItem { Label("Organize", systemImage: "slider.horizontal.3") }
+                            .tag(AppState.Tab.organize)
+                    }
                     ProfileView()
                         .tabItem { Label("Profile", systemImage: "person.crop.circle") }
                         .tag(AppState.Tab.profile)

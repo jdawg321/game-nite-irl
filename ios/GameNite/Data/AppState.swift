@@ -18,12 +18,19 @@ final class AppState {
     var games: [Game] = []
     var current: Game?
     var roster: [Player] = []
+    /// Your own role in the current game (roles are private to each player).
+    var myRole: PlayerRole?
     var errorMessage: String?
     /// A code from a QR scan or a gamenite:// link, waiting to be shown.
     var pendingCode: String?
     var selectedTab: Tab = .events
+    /// Organizer tools; only used when the profile is an organizer.
+    let organizer = OrganizerStore()
 
-    enum Tab: Hashable { case events, game, profile }
+    enum Tab: Hashable { case events, game, organize, profile }
+
+    var isOrganizer: Bool { profile?.isOrganizer == true }
+    var myUserId: UUID? { userId }
 
     private var userId: UUID?
     private var gameChannel: RealtimeChannelV2?
@@ -31,12 +38,23 @@ final class AppState {
     private var gameTasks: [Task<Void, Never>] = []
     private var listTask: Task<Void, Never>?
 
+    init() {
+        organizer.report = { [weak self] error in self?.report(error) }
+        organizer.didJoin = { [weak self] in
+            await self?.loadGames()
+            await self?.loadCurrent()
+        }
+    }
+
     var me: Player? { roster.first { $0.userId == userId } }
     var joinedRoster: [Player] { roster.filter { $0.status == .joined } }
 
     // MARK: Auth
 
     func start() async {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-demoOrganizer") { loadDemo(); return }
+        #endif
         guard AppConfig.isConfigured else { phase = .signedOut; return }
         for await (event, session) in supabase.auth.authStateChanges {
             switch event {
@@ -66,6 +84,8 @@ final class AppState {
         games = []
         current = nil
         roster = []
+        myRole = nil
+        organizer.reset()
         phase = .signedOut
         Task { await stopListening() }
     }
@@ -157,6 +177,7 @@ final class AppState {
                 await listen(to: game.id)
             } else {
                 roster = []
+                myRole = nil
             }
         } catch { report(error) }
     }
@@ -164,10 +185,20 @@ final class AppState {
     func loadRoster(_ gameId: UUID) async {
         do {
             roster = try await supabase.from("game_players")
-                .select("game_id, user_id, role, status, ready, volunteer, joined_at, profile:profiles(display_name)")
+                .select("game_id, user_id, status, ready, volunteer, joined_at, profile:profiles(display_name)")
                 .eq("game_id", value: gameId)
                 .order("joined_at", ascending: true)
                 .execute().value
+        } catch { report(error) }
+        await loadMyRole(gameId)
+    }
+
+    func loadMyRole(_ gameId: UUID) async {
+        guard let userId else { return }
+        do {
+            let rows: [RoleRow] = try await supabase.from("game_roles").select()
+                .eq("game_id", value: gameId).eq("user_id", value: userId).limit(1).execute().value
+            myRole = rows.first?.role
         } catch { report(error) }
     }
 
@@ -243,6 +274,8 @@ final class AppState {
                                                  filter: .eq("id", value: gameId.uuidString.lowercased()))
         let playerChanges = channel.postgresChange(AnyAction.self, table: "game_players",
                                                    filter: .eq("game_id", value: gameId.uuidString.lowercased()))
+        let roleChanges = channel.postgresChange(AnyAction.self, table: "game_roles",
+                                                 filter: .eq("game_id", value: gameId.uuidString.lowercased()))
         do { try await channel.subscribeWithError() } catch { report(error) }
         gameChannel = channel
 
@@ -252,6 +285,9 @@ final class AppState {
             },
             Task { [weak self] in
                 for await _ in playerChanges { await self?.loadRoster(gameId) }
+            },
+            Task { [weak self] in
+                for await _ in roleChanges { await self?.loadMyRole(gameId) }
             },
         ]
     }
@@ -292,7 +328,7 @@ final class AppState {
 
     /// Catch up after the app returns to the foreground (sockets may have dropped).
     func resume() async {
-        guard phase == .ready else { return }
+        guard phase == .ready, !organizer.demo else { return }
         await loadGames()
         if let game = current { await reloadCurrentGame(game.id); await loadRoster(game.id) }
     }
@@ -309,4 +345,33 @@ final class AppState {
             errorMessage = error.localizedDescription
         }
     }
+
+    #if DEBUG
+    /// Simulator-only demo: an organizer with one lobby, no network.
+    private func loadDemo() {
+        let me = UUID()
+        userId = me
+        profile = Profile(id: me, displayName: "Jordan", isAdult: true, rulesAckAt: .now, replayConsent: true, isOrganizer: true)
+        var cfg = GameConfig()
+        cfg.minPlayers = 4
+        let game = Game(id: UUID(), title: "Friday Night Sardines", kind: "scheduled",
+                        startsAt: .now.addingTimeInterval(86400), locationName: "Downtown Provo",
+                        joinCode: "GN-7K4Q", status: .lobby, config: cfg, configVersion: 2)
+        let names: [(String, Bool)] = [("Lucas", true), ("Maya", true), ("Theo", false), ("Ava", true), ("Sam", false)]
+        var players = names.map { Player(gameId: game.id, userId: UUID(), status: .joined, ready: $0.1, volunteer: false,
+                                         joinedAt: .now, profile: PlayerName(displayName: $0.0)) }
+        players.insert(Player(gameId: game.id, userId: me, status: .joined, ready: true, volunteer: false,
+                              joinedAt: .now, profile: PlayerName(displayName: "Jordan")), at: 0)
+        organizer.demo = true
+        organizer.games = [game]
+        organizer.roster = players
+        organizer.audit = [AuditEntry(id: 2, action: "open_lobby", detail: nil, at: .now),
+                           AuditEntry(id: 1, action: "create_game", detail: nil, at: .now.addingTimeInterval(-600))]
+        games = [game]
+        current = game
+        roster = players
+        phase = .ready
+        selectedTab = .organize
+    }
+    #endif
 }

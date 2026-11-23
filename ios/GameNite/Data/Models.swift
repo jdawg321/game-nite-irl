@@ -56,6 +56,11 @@ struct GameConfig: Codable, Equatable {
     var accuracyMax = 20
     var capacity = 50
     var minPlayers = 4
+    var startMode = "manual"
+    var seekersSeeSeekers = false
+    var hidersSeeSeekers = true
+    var distRef = "origin"
+    var hiderRank = "separate"
 
     init() {}
 
@@ -73,6 +78,11 @@ struct GameConfig: Codable, Equatable {
         accuracyMax = (try? c.decode(Int.self, forKey: .accuracyMax)) ?? d.accuracyMax
         capacity = (try? c.decode(Int.self, forKey: .capacity)) ?? d.capacity
         minPlayers = (try? c.decode(Int.self, forKey: .minPlayers)) ?? d.minPlayers
+        startMode = (try? c.decode(String.self, forKey: .startMode)) ?? d.startMode
+        seekersSeeSeekers = (try? c.decode(Bool.self, forKey: .seekersSeeSeekers)) ?? d.seekersSeeSeekers
+        hidersSeeSeekers = (try? c.decode(Bool.self, forKey: .hidersSeeSeekers)) ?? d.hidersSeeSeekers
+        distRef = (try? c.decode(String.self, forKey: .distRef)) ?? d.distRef
+        hiderRank = (try? c.decode(String.self, forKey: .hiderRank)) ?? d.hiderRank
     }
 
     var hiderMethodText: String {
@@ -104,9 +114,11 @@ struct Game: Codable, Identifiable, Equatable {
     var startedAt: Date?
     var endedAt: Date?
     var endReason: String?
+    var configVersion: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, title, kind, status, config
+        case configVersion = "config_version"
         case startsAt = "starts_at"
         case locationName = "location_name"
         case joinCode = "join_code"
@@ -130,7 +142,6 @@ struct PlayerName: Codable, Equatable {
 struct Player: Codable, Identifiable, Equatable {
     let gameId: UUID
     let userId: UUID
-    var role: PlayerRole
     var status: PlayerStatus
     var ready: Bool
     var volunteer: Bool
@@ -141,7 +152,7 @@ struct Player: Codable, Identifiable, Equatable {
     var name: String { profile?.displayName ?? "Player" }
 
     enum CodingKeys: String, CodingKey {
-        case role, status, ready, volunteer, profile
+        case status, ready, volunteer, profile
         case gameId = "game_id"
         case userId = "user_id"
         case joinedAt = "joined_at"
@@ -159,5 +170,52 @@ struct Membership: Codable {
         case status, game
         case gameId = "game_id"
         case joinedAt = "joined_at"
+    }
+}
+
+struct RoleRow: Codable, Equatable {
+    let gameId: UUID
+    let userId: UUID
+    var role: PlayerRole
+    enum CodingKeys: String, CodingKey {
+        case role
+        case gameId = "game_id"
+        case userId = "user_id"
+    }
+}
+
+struct AuditEntry: Codable, Identifiable, Equatable {
+    let id: Int
+    let action: String
+    let detail: [String: AnyJSONValue]?
+    let at: Date
+
+    var title: String { action.replacingOccurrences(of: "_", with: " ").capitalized }
+    var reason: String? {
+        if case .string(let r)? = detail?["reason"] { return r }
+        return nil
+    }
+}
+
+/// Minimal JSON value for reading audit details.
+enum AnyJSONValue: Codable, Equatable {
+    case string(String), number(Double), bool(Bool), other
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let s = try? c.decode(String.self) { self = .string(s) }
+        else if let n = try? c.decode(Double.self) { self = .number(n) }
+        else if let b = try? c.decode(Bool.self) { self = .bool(b) }
+        else { self = .other }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .string(let s): try c.encode(s)
+        case .number(let n): try c.encode(n)
+        case .bool(let b): try c.encode(b)
+        case .other: try c.encodeNil()
+        }
     }
 }
