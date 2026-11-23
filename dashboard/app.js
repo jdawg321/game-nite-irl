@@ -86,12 +86,11 @@ function viewSignIn() {
   return `<div class="center"><div class="mega">GAME<br>NITE</div>
   <div class="panel glow"><h2>Organizer sign-in</h2>
   ${S.codeSent ? `
-    <p class="muted">Enter the 6-digit code sent to ${esc(S.email)}.</p>
-    <form data-form="verify" class="list"><input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required>
-    <button class="btn cta">Sign in</button></form>
+    <p>Check <b>${esc(S.email)}</b> and click the sign-in link. It opens this dashboard signed in.</p>
+    <p class="muted">Open the link in this browser. No email after a minute? Check spam, then try again.</p>
     <p><button class="btn sm" data-act="resetEmail">Use a different email</button></p>` : `
     <form data-form="email" class="list"><input type="email" name="email" autocomplete="email" placeholder="you@example.com" required value="${esc(S.email)}">
-    <button class="btn cta">Email me a code</button></form>`}
+    <button class="btn cta">Email me a sign-in link</button></form>`}
   </div></div>`;
 }
 
@@ -261,15 +260,12 @@ const ACTS = {
 const FORMS = {
   email: async (form) => {
     S.email = new FormData(form).get('email').trim();
-    const { error } = await sb.auth.signInWithOtp({ email: S.email });
+    const { error } = await sb.auth.signInWithOtp({
+      email: S.email,
+      options: { emailRedirectTo: location.origin + location.pathname },
+    });
     if (error) return toast(error.message);
     S.codeSent = true; render();
-    document.querySelector('input[name=code]')?.focus();
-  },
-  verify: async (form) => {
-    const token = new FormData(form).get('code').trim();
-    const { error } = await sb.auth.verifyOtp({ email: S.email, token, type: 'email' });
-    if (error) toast(error.message);
   },
   create: async (form) => {
     const f = new FormData(form);

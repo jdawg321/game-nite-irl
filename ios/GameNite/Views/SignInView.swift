@@ -42,6 +42,7 @@ struct SignInView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .disabled(busy || !AppConfig.isConfigured)
 
+                if AppConfig.emailSignInEnabled {
                 HStack {
                     Rectangle().fill(Theme.line).frame(height: 1)
                     Text("or use email").font(.footnote).foregroundStyle(Theme.muted)
@@ -79,6 +80,7 @@ struct SignInView: View {
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Theme.neon)
                     }
+                }
                 }
 
                 Text("Game Nite is for players 18 and older.")

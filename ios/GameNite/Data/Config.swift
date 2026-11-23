@@ -9,6 +9,10 @@ enum AppConfig {
     static let dashboardURL = URL(string: "https://game-nite-irl.vercel.app")!
     static let privacyURL = URL(string: "https://game-nite-irl.vercel.app/legal/privacy.html")!
 
+    /// Email-code sign-in needs a custom email sender (Supabase only allows editing the
+    /// email template to include the code once custom SMTP is set up). Apple-only until then.
+    static let emailSignInEnabled = false
+
     static var isConfigured: Bool {
         !supabaseURL.absoluteString.contains("YOUR-PROJECT") && !supabasePublishableKey.hasPrefix("YOUR-")
     }
