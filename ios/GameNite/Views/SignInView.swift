@@ -10,6 +10,9 @@ struct SignInView: View {
     @State private var codeSent = false
     @State private var busy = false
     @State private var nonce = ""
+    @State private var reviewerTaps = 0
+    @State private var reviewerEmail = ""
+    @State private var reviewerPassword = ""
     @FocusState private var focus: Field?
 
     enum Field { case email, code }
@@ -86,6 +89,35 @@ struct SignInView: View {
                 Text("Game Nite is for players 18 and older.")
                     .font(.footnote)
                     .foregroundStyle(Theme.muted)
+                    .onTapGesture { reviewerTaps += 1 }
+
+                // App Review only: revealed by tapping the line above five times
+                // (explained in the TestFlight review notes).
+                if reviewerTaps >= 5 {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionLabel(text: "Reviewer sign-in")
+                        TextField("", text: $reviewerEmail, prompt: Text(verbatim: "Email").foregroundStyle(Theme.muted))
+                            .textContentType(.username)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .fieldStyle()
+                        SecureField("", text: $reviewerPassword, prompt: Text("Password").foregroundStyle(Theme.muted))
+                            .textContentType(.password)
+                            .fieldStyle()
+                        Button("Sign in") {
+                            Task {
+                                busy = true
+                                await app.reviewerSignIn(email: reviewerEmail.trimmingCharacters(in: .whitespaces),
+                                                         password: reviewerPassword)
+                                busy = false
+                            }
+                        }
+                        .buttonStyle(.secondary)
+                        .disabled(busy || !reviewerEmail.contains("@") || reviewerPassword.isEmpty)
+                    }
+                    .panel()
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 40)

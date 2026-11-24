@@ -3,8 +3,11 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(AppState.self) private var app
     @State private var confirmSignOut = false
+    @State private var confirmDelete = false
+    @State private var deleting = false
 
     var body: some View {
+        NavigationStack {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 14) {
@@ -38,14 +41,30 @@ struct ProfileView: View {
                 if app.profile?.isOrganizer == true {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Organizer tools").font(.headline)
-                        Text("Create games, open lobbies and run games from the organizer dashboard.")
+                        Text("Create games, open lobbies and run live games from the Organize tab.")
                             .font(.subheadline).foregroundStyle(Theme.muted)
-                        Link(destination: AppConfig.dashboardURL) {
-                            Label("Open dashboard", systemImage: "arrow.up.right.square")
+                        Button {
+                            app.selectedTab = .organize
+                        } label: {
+                            Label("Go to Organize", systemImage: "slider.horizontal.3")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Theme.neon)
                         }
                     }
+                    .panel()
+                }
+
+                NavigationLink {
+                    GPSTestView()
+                } label: {
+                    HStack {
+                        Label("GPS test", systemImage: "location.viewfinder")
+                        Spacer()
+                        if app.gpsTest.running { Pill(text: "Recording", tint: Theme.ok) }
+                        Image(systemName: "chevron.right").font(.footnote.weight(.bold)).foregroundStyle(Theme.muted)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
                     .panel()
                 }
 
@@ -60,13 +79,30 @@ struct ProfileView: View {
 
                 Button("Sign out") { confirmSignOut = true }
                     .buttonStyle(.secondary)
+
+                Button(deleting ? "Deleting…" : "Delete account") { confirmDelete = true }
+                    .buttonStyle(SecondaryButtonStyle(tint: Theme.crit))
+                    .disabled(deleting)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
         }
         .background(Theme.bg)
+        .toolbar(.hidden, for: .navigationBar)
+        }
         .confirmationDialog("Sign out of Game Nite?", isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) { Task { await app.signOut() } }
+        }
+        .confirmationDialog("Delete your Game Nite account?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete account permanently", role: .destructive) {
+                Task {
+                    deleting = true
+                    _ = await app.deleteAccount()
+                    deleting = false
+                }
+            }
+        } message: {
+            Text("This permanently deletes your profile, game history, locations and replays. Games you organize are deleted too. This can't be undone.")
         }
     }
 }

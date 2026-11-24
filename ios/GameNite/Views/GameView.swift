@@ -9,8 +9,8 @@ struct GameView: View {
             if let game = app.current {
                 switch game.status {
                 case .draft, .lobby: LobbyView(game: game)
-                case .preparing, .active, .paused: RoleRevealView(game: game)
-                case .finished, .terminated: GameOverView(game: game)
+                case .preparing, .active, .paused: LiveGameView(game: game)
+                case .finished, .terminated: ResultsView(game: game)
                 }
             } else {
                 VStack(spacing: 14) {
@@ -60,6 +60,25 @@ struct LobbyView: View {
                     stat("\(players.count)", "joined")
                     stat("\(readyCount)", "ready")
                     stat("\(game.config.minPlayers)", "needed")
+                }
+
+                if !app.location.canTrack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Allow location before the game starts", systemImage: "location")
+                            .font(.headline)
+                        Text("While a game is running, Game Nite shares your location with the game server about every 25 seconds. That's how it checks finds and keeps everyone inside the game area. It stops when the game ends.")
+                            .font(.footnote).foregroundStyle(Theme.muted)
+                        if app.location.isDenied {
+                            Button("Open Settings") {
+                                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                            }
+                            .buttonStyle(.secondary)
+                        } else {
+                            Button("Allow location") { app.location.requestPermission() }
+                                .buttonStyle(.cta)
+                        }
+                    }
+                    .panel()
                 }
 
                 if game.status == .lobby {
@@ -138,60 +157,6 @@ struct LobbyView: View {
             Text(label).font(.footnote).foregroundStyle(Theme.muted)
         }
         .panel()
-    }
-}
-
-struct RoleRevealView: View {
-    let game: Game
-    @Environment(AppState.self) private var app
-
-    private var isHider: Bool { app.myRole == .hider }
-
-    var body: some View {
-        VStack(spacing: 18) {
-            Spacer()
-            SectionLabel(text: game.status == .paused ? "Game paused" : "Game starting")
-            Text(isHider ? "YOU'RE\nHIDING" : "YOU'RE\nSEEKING")
-                .font(.system(size: 54, weight: .black).width(.expanded))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.clear)
-                .overlay { FlowGradient(duration: 6).mask(
-                    Text(isHider ? "YOU'RE\nHIDING" : "YOU'RE\nSEEKING")
-                        .font(.system(size: 54, weight: .black).width(.expanded))
-                        .multilineTextAlignment(.center)) }
-                .shadow(color: Theme.neon.opacity(0.5), radius: 16)
-            Text(isHider
-                 ? "Head out and find a hiding spot inside the boundary. Seekers wait for the head start."
-                 : "Wait at the start point for the head start to finish, then go find the hiding group.")
-                .font(.body)
-                .foregroundStyle(Theme.muted)
-                .multilineTextAlignment(.center)
-            Text("The live map arrives in the next TestFlight build.")
-                .font(.footnote)
-                .foregroundStyle(Theme.warn)
-                .panel()
-            Spacer()
-        }
-        .padding(24)
-    }
-}
-
-struct GameOverView: View {
-    let game: Game
-
-    var body: some View {
-        VStack(spacing: 14) {
-            Image(systemName: game.status == .terminated ? "xmark.octagon" : "flag.checkered")
-                .font(.system(size: 44))
-                .foregroundStyle(game.status == .terminated ? Theme.crit : Theme.neon)
-            Text(game.status == .terminated ? "Game stopped" : "Game over")
-                .font(.system(size: 30, weight: .black).width(.expanded))
-            if let reason = game.endReason, !reason.isEmpty {
-                Text(reason).font(.subheadline).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
-            }
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

@@ -26,6 +26,12 @@ final class AppState {
     var selectedTab: Tab = .events
     /// Organizer tools; only used when the profile is an organizer.
     let organizer = OrganizerStore()
+    /// The one location manager for games and the GPS test.
+    let location = LocationService()
+    /// Kept here so a GPS test keeps recording when you leave its screen.
+    let gpsTest = GPSTestLog()
+    /// The live game engine (GPS, map, clues, finds, results).
+    let live: LiveGameStore
 
     enum Tab: Hashable { case events, game, organize, profile }
 
@@ -39,6 +45,8 @@ final class AppState {
     private var listTask: Task<Void, Never>?
 
     init() {
+        live = LiveGameStore(location: location)
+        live.report = { [weak self] error in self?.report(error) }
         organizer.report = { [weak self] error in self?.report(error) }
         organizer.didJoin = { [weak self] in
             await self?.loadGames()
@@ -87,11 +95,36 @@ final class AppState {
         myRole = nil
         organizer.reset()
         phase = .signedOut
-        Task { await stopListening() }
+        Task {
+            await stopListening()
+            await live.stop()
+        }
     }
 
     func signOut() async {
         try? await supabase.auth.signOut()
+    }
+
+    /// Permanently deletes your account and everything tied to it.
+    func deleteAccount() async -> Bool {
+        do {
+            await live.stop()
+            try await supabase.rpc("delete_account").execute()
+            try? await supabase.auth.signOut()
+            signedOutCleanup()
+            return true
+        } catch {
+            report(error)
+            return false
+        }
+    }
+
+    /// For Apple's beta reviewers only: they can't receive Sign in with Apple
+    /// on a shared device, so the review account signs in with a password.
+    func reviewerSignIn(email: String, password: String) async {
+        do {
+            _ = try await supabase.auth.signIn(email: email, password: password)
+        } catch { report(error) }
     }
 
     // MARK: Profile
@@ -179,6 +212,7 @@ final class AppState {
                 roster = []
                 myRole = nil
             }
+            await syncLive()
         } catch { report(error) }
     }
 
@@ -231,6 +265,7 @@ final class AppState {
         await stopGameListening()
         current = nil
         roster = []
+        await live.stop()
         await loadGames()
     }
 
@@ -265,6 +300,15 @@ final class AppState {
         return s
     }
 
+    /// Starts or stops GPS and live polling to match the current game.
+    func syncLive() async {
+        if let g = current, [.preparing, .active, .paused].contains(g.status), gpsTest.running {
+            location.stop()
+            gpsTest.end()
+        }
+        await live.sync(game: current, isMember: me?.status == .joined)
+    }
+
     // MARK: Live updates
 
     private func listen(to gameId: UUID) async {
@@ -295,7 +339,10 @@ final class AppState {
     private func reloadCurrentGame(_ gameId: UUID) async {
         do {
             let g: Game = try await supabase.from("games").select().eq("id", value: gameId).single().execute().value
-            if current?.id == gameId { current = g }
+            if current?.id == gameId {
+                current = g
+                await syncLive()
+            }
             if let i = games.firstIndex(where: { $0.id == gameId }) { games[i] = g }
         } catch { report(error) }
     }
@@ -372,6 +419,26 @@ final class AppState {
         roster = players
         phase = .ready
         selectedTab = .organize
+
+        if ProcessInfo.processInfo.arguments.contains("-demoLive") {
+            var live = game
+            live.status = .active
+            live.startLat = 40.2338; live.startLng = -111.6585; live.boundaryM = 500
+            live.startedAt = .now.addingTimeInterval(-300)
+            live.seekStartsAt = .now.addingTimeInterval(-120)
+            live.endsAt = .now.addingTimeInterval(14 * 60 + 32)
+            current = live
+            myRole = .seeker
+            self.live.clue = Clue(mode: "proximity", band: "warm")
+            self.live.positions = [
+                VisiblePosition(userId: UUID(), displayName: "Lucas", lat: 40.2346, lng: -111.6592, accuracyM: 6,
+                                recordedAt: .now, stale: false, grp: "seeker", outOfBounds: false),
+                VisiblePosition(userId: UUID(), displayName: "Maya", lat: 40.2329, lng: -111.6571, accuracyM: 9,
+                                recordedAt: .now.addingTimeInterval(-140), stale: true, grp: "seeker", outOfBounds: false),
+            ]
+            self.live.lastReportAt = .now.addingTimeInterval(-12)
+            selectedTab = .game
+        }
     }
     #endif
 }

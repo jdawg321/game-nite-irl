@@ -10,16 +10,32 @@
 		A1B2C3D40000000000000E01 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D40000000000000D01 /* Supabase */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A1B2C3D40000000000000E10 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1B2C3D40000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1B2C3D40000000000000101;
+			remoteInfo = GameNite;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		A1B2C3D40000000000000A01 /* GameNite.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GameNite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D40000000000000A02 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1B2C3D40000000000000A03 /* GameNite.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GameNite.entitlements; sourceTree = "<group>"; };
+		A1B2C3D40000000000000A04 /* GameNiteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GameNiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A1B2C3D40000000000000B01 /* GameNite */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = GameNite;
+			sourceTree = "<group>";
+		};
+		A1B2C3D40000000000000B02 /* GameNiteTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GameNiteTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -33,6 +49,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1B2C3D40000000000000C05 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -40,6 +63,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40000000000000B01 /* GameNite */,
+				A1B2C3D40000000000000B02 /* GameNiteTests */,
 				A1B2C3D40000000000000F03 /* Config */,
 				A1B2C3D40000000000000F02 /* Products */,
 			);
@@ -49,6 +73,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40000000000000A01 /* GameNite.app */,
+				A1B2C3D40000000000000A04 /* GameNiteTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -88,6 +113,27 @@
 			productReference = A1B2C3D40000000000000A01 /* GameNite.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A1B2C3D40000000000000102 /* GameNiteTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D40000000000000203 /* Build configuration list for PBXNativeTarget "GameNiteTests" */;
+			buildPhases = (
+				A1B2C3D40000000000000C04 /* Sources */,
+				A1B2C3D40000000000000C05 /* Frameworks */,
+				A1B2C3D40000000000000C06 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1B2C3D40000000000000E11 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A1B2C3D40000000000000B02 /* GameNiteTests */,
+			);
+			name = GameNiteTests;
+			productName = GameNiteTests;
+			productReference = A1B2C3D40000000000000A04 /* GameNiteTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -100,6 +146,10 @@
 				TargetAttributes = {
 					A1B2C3D40000000000000101 = {
 						CreatedOnToolsVersion = 27.2;
+					};
+					A1B2C3D40000000000000102 = {
+						CreatedOnToolsVersion = 27.2;
+						TestTargetID = A1B2C3D40000000000000101;
 					};
 				};
 			};
@@ -121,12 +171,20 @@
 			projectRoot = "";
 			targets = (
 				A1B2C3D40000000000000101 /* GameNite */,
+				A1B2C3D40000000000000102 /* GameNiteTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A1B2C3D40000000000000C03 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D40000000000000C06 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -143,7 +201,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1B2C3D40000000000000C04 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1B2C3D40000000000000E11 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1B2C3D40000000000000101 /* GameNite */;
+			targetProxy = A1B2C3D40000000000000E10 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1B2C3D40000000000000301 /* Debug */ = {
@@ -207,6 +280,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Game Nite";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Game Nite uses the camera to scan a game's QR code so you can join it.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Game Nite shares your location with the game server only while you're in an active game, about every 25 seconds, to check finds, keep you inside the game area and rank players. Other players see only what the game's rules allow.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -243,6 +317,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Game Nite";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Game Nite uses the camera to scan a game's QR code so you can join it.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Game Nite shares your location with the game server only while you're in an active game, about every 25 seconds, to check finds, keep you inside the game area and rank players. Other players see only what the game's rules allow.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -264,6 +339,46 @@
 			};
 			name = Release;
 		};
+		A1B2C3D40000000000000305 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J5P52CF935;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordanfitts.GameNiteTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GameNite.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GameNite";
+			};
+			name = Debug;
+		};
+		A1B2C3D40000000000000306 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J5P52CF935;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordanfitts.GameNiteTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GameNite.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GameNite";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -281,6 +396,15 @@
 			buildConfigurations = (
 				A1B2C3D40000000000000301 /* Debug */,
 				A1B2C3D40000000000000302 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D40000000000000203 /* Build configuration list for PBXNativeTarget "GameNiteTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D40000000000000305 /* Debug */,
+				A1B2C3D40000000000000306 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

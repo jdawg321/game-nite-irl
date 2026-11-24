@@ -115,10 +115,25 @@ struct Game: Codable, Identifiable, Equatable {
     var endedAt: Date?
     var endReason: String?
     var configVersion: Int?
+    var startLat: Double?
+    var startLng: Double?
+    var boundaryM: Int?
+    var seekStartsAt: Date?
+    var endsAt: Date?
+    var pausedAt: Date?
+    var pauseReason: String?
+    var emergency: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, kind, status, config
+        case id, title, kind, status, config, emergency
         case configVersion = "config_version"
+        case startLat = "start_lat"
+        case startLng = "start_lng"
+        case boundaryM = "boundary_m"
+        case seekStartsAt = "seek_starts_at"
+        case endsAt = "ends_at"
+        case pausedAt = "paused_at"
+        case pauseReason = "pause_reason"
         case startsAt = "starts_at"
         case locationName = "location_name"
         case joinCode = "join_code"
@@ -217,5 +232,143 @@ enum AnyJSONValue: Codable, Equatable {
         case .bool(let b): try c.encode(b)
         case .other: try c.encodeNil()
         }
+    }
+}
+
+// MARK: - Live game (Stage 2)
+
+/// A position the server decided you may see.
+struct VisiblePosition: Codable, Identifiable, Equatable {
+    let userId: UUID
+    let displayName: String?
+    let lat: Double
+    let lng: Double
+    let accuracyM: Double
+    let recordedAt: Date
+    let stale: Bool
+    /// "me", "hiding" or "seeker"
+    let grp: String
+    let outOfBounds: Bool
+
+    var id: UUID { userId }
+
+    enum CodingKeys: String, CodingKey {
+        case lat, lng, stale, grp
+        case userId = "user_id"
+        case displayName = "display_name"
+        case accuracyM = "accuracy_m"
+        case recordedAt = "recorded_at"
+        case outOfBounds = "out_of_bounds"
+    }
+}
+
+/// What the server tells you about where the hiding group is.
+struct Clue: Codable, Equatable {
+    /// countdown, head_start, hiding, proximity, area, periodic_hidden, no_signal, paused, over
+    let mode: String
+    var band: String?
+    var lat: Double?
+    var lng: Double?
+    var radiusM: Double?
+    var nextInS: Int?
+    var seekStartsAt: Date?
+    var endsAt: Date?
+    var reason: String?
+    var emergency: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case mode, band, lat, lng, reason, emergency
+        case radiusM = "radius_m"
+        case nextInS = "next_in_s"
+        case seekStartsAt = "seek_starts_at"
+        case endsAt = "ends_at"
+    }
+
+    var bandText: String {
+        switch band {
+        case "very_close": "Very close · under 25 m"
+        case "close": "Close · 25–75 m"
+        case "warm": "Getting warm · 75–200 m"
+        case "far": "Far · over 200 m"
+        default: "Waiting for your GPS"
+        }
+    }
+}
+
+enum FindStatus: String, Codable { case confirming, verified, review, rejected }
+
+struct Find: Codable, Identifiable, Equatable {
+    let id: UUID
+    let gameId: UUID
+    let seekerId: UUID
+    let accuracyM: Double
+    let distanceM: Double?
+    var status: FindStatus
+    var reason: String?
+    let createdAt: Date
+    var seeker: PlayerName?
+
+    var seekerName: String { seeker?.displayName ?? "A seeker" }
+
+    enum CodingKeys: String, CodingKey {
+        case id, status, reason, seeker
+        case gameId = "game_id"
+        case seekerId = "seeker_id"
+        case accuracyM = "accuracy_m"
+        case distanceM = "distance_m"
+        case createdAt = "created_at"
+    }
+}
+
+struct FindResult: Codable, Equatable {
+    /// confirming, review, too_far
+    let result: String
+    var findId: UUID?
+    var distanceBand: String?
+    enum CodingKeys: String, CodingKey {
+        case result
+        case findId = "find_id"
+        case distanceBand = "distance_band"
+    }
+}
+
+struct ResultRow: Codable, Identifiable, Equatable {
+    let userId: UUID
+    let displayName: String?
+    /// hider, found, unfinished
+    let category: String
+    let place: Int?
+    let shared: Bool
+    let foundAt: Date?
+    let bestDistanceM: Double?
+
+    var id: UUID { userId }
+    var name: String { displayName ?? "Player" }
+
+    enum CodingKeys: String, CodingKey {
+        case category, place, shared
+        case userId = "user_id"
+        case displayName = "display_name"
+        case foundAt = "found_at"
+        case bestDistanceM = "best_distance_m"
+    }
+
+    var placeText: String {
+        guard let place else { return "–" }
+        return shared ? "T-\(place)" : "\(place)"
+    }
+}
+
+enum Ordinal {
+    static func string(_ n: Int) -> String {
+        let suffix: String
+        switch (n % 100, n % 10) {
+        case (11...13, _): suffix = "th"
+        case (_, 1): suffix = "st"
+        case (_, 2): suffix = "nd"
+        case (_, 3): suffix = "rd"
+        default: suffix = "th"
+        }
+        return "\(n)\(suffix)"
     }
 }

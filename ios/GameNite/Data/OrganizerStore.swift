@@ -12,6 +12,10 @@ final class OrganizerStore {
     /// Roles the organizer may see. Empty while the organizer is playing a started game.
     var roles: [UUID: PlayerRole] = [:]
     var audit: [AuditEntry] = []
+    /// Finds waiting for the organizer's decision.
+    var reviewQueue: [Find] = []
+    /// Everyone's position (only filled when you're not playing this game).
+    var positions: [VisiblePosition] = []
     var busy = false
     /// Debug-only demo data with no network calls.
     var demo = false
@@ -55,7 +59,7 @@ final class OrganizerStore {
     func close() async {
         if demo { return }
         await stopListening()
-        selected = nil; roster = []; roles = [:]; audit = []
+        selected = nil; roster = []; roles = [:]; audit = []; reviewQueue = []; positions = []
     }
 
     func loadDetail() async {
@@ -68,7 +72,12 @@ final class OrganizerStore {
             async let ro: [RoleRow] = supabase.from("game_roles").select().eq("game_id", value: game.id).execute().value
             async let a: [AuditEntry] = supabase.from("audit_log").select("id, action, detail, at")
                 .eq("game_id", value: game.id).order("at", ascending: false).limit(50).execute().value
-            let (fresh, players, roleRows, log) = try await (g, r, ro, a)
+            async let f: [Find] = supabase.from("finds")
+                .select("id, game_id, seeker_id, accuracy_m, distance_m, status, reason, created_at, seeker:profiles!finds_seeker_id_fkey(display_name)")
+                .eq("game_id", value: game.id).eq("status", value: "review")
+                .order("created_at", ascending: true).execute().value
+            let (fresh, players, roleRows, log, queue) = try await (g, r, ro, a, f)
+            reviewQueue = queue
             selected = fresh
             if let i = games.firstIndex(where: { $0.id == fresh.id }) { games[i] = fresh }
             roster = players
@@ -143,6 +152,42 @@ final class OrganizerStore {
         }
     }
 
+    struct PauseParams: Encodable { let gid: UUID; let reason: String; let is_emergency: Bool }
+    struct AreaParams: Encodable { let gid: UUID; let lat: Double; let lng: Double; let radius_m: Int }
+    struct ReviewParams: Encodable { let fid: UUID; let approve: Bool; let reason: String }
+
+    func pause(reason: String, emergency: Bool) async -> Bool {
+        guard let g = selected else { return false }
+        return await run {
+            try await supabase.rpc("pause_game", params: PauseParams(gid: g.id, reason: reason, is_emergency: emergency)).execute()
+        }
+    }
+
+    func resume() async -> Bool {
+        guard let g = selected else { return false }
+        return await run { try await supabase.rpc("resume_game", params: GameParam(gid: g.id)).execute() }
+    }
+
+    func setArea(lat: Double, lng: Double, radius: Int) async -> Bool {
+        guard let g = selected else { return false }
+        return await run {
+            try await supabase.rpc("set_start_point", params: AreaParams(gid: g.id, lat: lat, lng: lng, radius_m: radius)).execute()
+        }
+    }
+
+    func review(_ find: Find, approve: Bool, reason: String) async -> Bool {
+        await run { try await supabase.rpc("review_find", params: ReviewParams(fid: find.id, approve: approve, reason: reason)).execute() }
+    }
+
+    /// Everyone's latest position; the server returns only what you may see.
+    func loadPositions() async {
+        guard let g = selected, !demo else { return }
+        do {
+            _ = try? await supabase.rpc("tick_game", params: ["gid": g.id]).execute()
+            positions = try await supabase.rpc("visible_positions", params: ["gid": g.id]).execute().value
+        } catch { report(error) }
+    }
+
     func joinAsPlayer() async -> Bool {
         guard let g = selected else { return false }
         return await run {
@@ -177,6 +222,7 @@ final class OrganizerStore {
             ch.postgresChange(AnyAction.self, table: "games", filter: .eq("id", value: id)),
             ch.postgresChange(AnyAction.self, table: "game_players", filter: .eq("game_id", value: id)),
             ch.postgresChange(AnyAction.self, table: "game_roles", filter: .eq("game_id", value: id)),
+            ch.postgresChange(AnyAction.self, table: "finds", filter: .eq("game_id", value: id)),
         ]
         do { try await ch.subscribeWithError() } catch { report(error) }
         channel = ch

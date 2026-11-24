@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 /// Organizer tab: your games → a game's control screen (layout A:
@@ -101,8 +102,14 @@ struct OrganizerGameView: View {
     @State private var terminateReason = ""
     @State private var removing: Player?
     @State private var removeReason = ""
+    @State private var pausing: Bool?          // nil = closed, true = emergency
+    @State private var pauseReason = ""
+    @State private var reviewing: (find: Find, approve: Bool)?
+    @State private var reviewReason = ""
+    @State private var radius = 600
+    @State private var areaBusy = false
 
-    enum Section: Hashable { case players, rules, log }
+    enum Section: Hashable { case players, map, finds, rules, log }
 
     private var store: OrganizerStore { app.organizer }
     private var game: Game? { store.selected?.id == gameId ? store.selected : nil }
@@ -120,7 +127,9 @@ struct OrganizerGameView: View {
                             gameCard(game)
                             if playing { fairPlayNote }
                             Picker("Section", selection: $section) {
-                                Text("Players \(store.joined.count)").tag(Section.players)
+                                Text("Players").tag(Section.players)
+                                Text("Map").tag(Section.map)
+                                Text(store.reviewQueue.isEmpty ? "Finds" : "Finds \(store.reviewQueue.count)").tag(Section.finds)
                                 Text("Rules").tag(Section.rules)
                                 Text("Log").tag(Section.log)
                             }
@@ -128,6 +137,8 @@ struct OrganizerGameView: View {
 
                             switch section {
                             case .players: playersSection(game)
+                            case .map: mapSection(game)
+                            case .finds: findsSection
                             case .rules: rulesSection(game)
                             case .log: logSection
                             }
@@ -147,7 +158,7 @@ struct OrganizerGameView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if let g = store.games.first(where: { $0.id == gameId }) { await store.open(g) }
-            if let g = game { draft = g.config }
+            if let g = game { draft = g.config; radius = g.boundaryM ?? 600 }
         }
         .onChange(of: game?.config) { _, new in if let new { draft = new } }
         .onDisappear { Task { await store.close() } }
@@ -167,6 +178,32 @@ struct OrganizerGameView: View {
             Button("Cancel", role: .cancel) { terminateReason = "" }
         } message: {
             Text("Everyone's game ends immediately.")
+        }
+        .alert(pausing == true ? "Emergency pause" : "Pause the game?", isPresented: Binding(
+            get: { pausing != nil }, set: { if !$0 { pausing = nil } })) {
+            TextField("Reason (required, shown to players)", text: $pauseReason)
+            Button(pausing == true ? "Emergency pause" : "Pause", role: pausing == true ? .destructive : nil) {
+                let r = pauseReason.trimmingCharacters(in: .whitespaces)
+                let emergency = pausing == true
+                pauseReason = ""
+                if !r.isEmpty { Task { await store.pause(reason: r, emergency: emergency) } }
+            }
+            Button("Cancel", role: .cancel) { pauseReason = "" }
+        } message: {
+            Text(pausing == true
+                 ? "Every player sees a red stop screen. The clock stops and locations are hidden."
+                 : "The clock stops and player locations are hidden until you resume.")
+        }
+        .alert(reviewing?.approve == true ? "Approve this find?" : "Reject this find?", isPresented: Binding(
+            get: { reviewing != nil }, set: { if !$0 { reviewing = nil } })) {
+            TextField(reviewing?.approve == true ? "Reason (required, logged)" : "Reason (optional)", text: $reviewReason)
+            Button(reviewing?.approve == true ? "Approve" : "Reject", role: reviewing?.approve == true ? nil : .destructive) {
+                let r = reviewReason.trimmingCharacters(in: .whitespaces)
+                let item = reviewing
+                reviewReason = ""
+                if let item, !(item.approve && r.isEmpty) { Task { await store.review(item.find, approve: item.approve, reason: r) } }
+            }
+            Button("Cancel", role: .cancel) { reviewReason = "" }
         }
         .alert("Remove \(removing?.name ?? "player")?", isPresented: Binding(
             get: { removing != nil }, set: { if !$0 { removing = nil } })) {
@@ -305,6 +342,78 @@ struct OrganizerGameView: View {
         }
     }
 
+    // MARK: Map
+
+    @ViewBuilder
+    private func mapSection(_ game: Game) -> some View {
+        if playing && started {
+            Label("You're playing this game, so the live map is hidden here. Use the Game tab to see what your role allows.",
+                  systemImage: "eye.slash")
+                .font(.footnote).panel()
+        } else if game.status != .active {
+            Text(game.status == .paused
+                 ? "Locations are hidden while the game is paused."
+                 : "The live map shows everyone once the game is running.")
+                .font(.footnote).foregroundStyle(Theme.muted).panel()
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                OrganizerMap(game: game, positions: store.positions)
+                    .frame(height: 360)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                HStack(spacing: 14) {
+                    legend(Theme.neon, "Seekers")
+                    legend(Theme.cta, "Hiding group")
+                    legend(Theme.muted, "Older than 90 s")
+                }
+                let oob = store.positions.filter(\.outOfBounds)
+                if !oob.isEmpty {
+                    Banner(icon: "exclamationmark.triangle.fill",
+                           text: "Out of bounds: " + oob.compactMap(\.displayName).joined(separator: ", "))
+                }
+            }
+            .task(id: game.id) {
+                while !Task.isCancelled {
+                    await store.loadPositions()
+                    try? await Task.sleep(for: .seconds(10))
+                }
+            }
+        }
+    }
+
+    private func legend(_ color: Color, _ text: String) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 9, height: 9)
+            Text(text).font(.caption).foregroundStyle(Theme.muted)
+        }
+    }
+
+    // MARK: Finds
+
+    @ViewBuilder
+    private var findsSection: some View {
+        if store.reviewQueue.isEmpty {
+            Text("No finds need your review. Finds the GPS can't prove, or that the hiding group disputes, show up here.")
+                .font(.footnote).foregroundStyle(Theme.muted).panel()
+        }
+        ForEach(store.reviewQueue) { f in
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(f.seekerName).font(.headline)
+                    Spacer()
+                    Text(f.createdAt.formatted(date: .omitted, time: .shortened)).font(.caption).foregroundStyle(Theme.muted)
+                }
+                Text(f.reason ?? "Needs review").font(.footnote).foregroundStyle(Theme.warn)
+                Text("GPS ±\(Int(f.accuracyM.rounded())) m" + (f.distanceM.map { " · \(Int($0.rounded())) m from the group" } ?? ""))
+                    .font(.caption).foregroundStyle(Theme.muted)
+                HStack(spacing: 10) {
+                    Button("Reject") { reviewing = (f, false) }.buttonStyle(SecondaryButtonStyle(tint: Theme.crit))
+                    Button("Approve") { reviewing = (f, true) }.buttonStyle(.cta)
+                }
+            }
+            .panel()
+        }
+    }
+
     // MARK: Rules
 
     private func rulesSection(_ game: Game) -> some View {
@@ -316,6 +425,7 @@ struct OrganizerGameView: View {
                 Spacer()
                 Pill(text: "v\(game.configVersion ?? 1)", tint: locked ? Theme.warn : Theme.muted)
             }
+            gameArea(game, locked: locked)
             RulesEditor(config: $draft).disabled(locked)
             if !locked {
                 Button("Save rules") { Task { await store.saveConfig(draft) } }
@@ -323,6 +433,37 @@ struct OrganizerGameView: View {
                     .disabled(draft == game.config || store.busy)
             }
         }
+    }
+
+    private func gameArea(_ game: Game, locked: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Game area")
+            if let lat = game.startLat, let lng = game.startLng {
+                Text("Start point set (\(String(format: "%.5f, %.5f", lat, lng))). Players more than \(game.boundaryM ?? 600) m away get an out-of-bounds warning.")
+                    .font(.footnote).foregroundStyle(Theme.muted)
+            } else {
+                Text("No start point yet. Stand at the start point and tap below. Without one, out-of-bounds warnings are off.")
+                    .font(.footnote).foregroundStyle(Theme.warn)
+            }
+            if !locked {
+                Stepper("Boundary: \(radius) m from start", value: $radius, in: 100...3000, step: 50)
+                Button(areaBusy ? "Getting your location…" : "Use my location as the start point") {
+                    Task {
+                        areaBusy = true
+                        defer { areaBusy = false }
+                        if !app.location.canTrack { app.location.requestPermission(); return }
+                        guard let fix = await app.location.freshFix() else {
+                            app.errorMessage = "Couldn't get a GPS fix. Step into the open and try again."
+                            return
+                        }
+                        await store.setArea(lat: fix.latitude, lng: fix.longitude, radius: radius)
+                    }
+                }
+                .buttonStyle(.secondary)
+                .disabled(areaBusy || store.busy)
+            }
+        }
+        .panel()
     }
 
     // MARK: Log
@@ -368,9 +509,16 @@ struct OrganizerGameView: View {
                            : "Need \(game.config.minPlayers - store.joined.count) more") { confirmStart = true }
                         .buttonStyle(.cta)
                         .disabled(store.busy || store.joined.count < game.config.minPlayers)
+                case .preparing, .active:
+                    Button("Pause") { pausing = false }
+                        .buttonStyle(SecondaryButtonStyle(fullWidth: false))
+                    Button("Emergency") { pausing = true }
+                        .buttonStyle(SecondaryButtonStyle(tint: Theme.crit))
+                case .paused:
+                    Button("Resume game") { Task { await store.resume() } }
+                        .buttonStyle(.cta).disabled(store.busy)
                 default:
-                    Button("Live controls arrive in Stage 2") {}
-                        .buttonStyle(.cta).disabled(true)
+                    EmptyView()
                 }
             }
             .padding(.horizontal, 20)
@@ -541,5 +689,27 @@ struct LabeledPicker<Content: View>: View {
                 .pickerStyle(.menu)
                 .labelsHidden()
         }
+    }
+}
+
+/// Organizer's live map: every player, with the game area.
+struct OrganizerMap: View {
+    let game: Game
+    let positions: [VisiblePosition]
+
+    var body: some View {
+        Map(initialPosition: .automatic) {
+            if let lat = game.startLat, let lng = game.startLng {
+                MapCircle(center: .init(latitude: lat, longitude: lng), radius: CLLocationDistance(game.boundaryM ?? 600))
+                    .foregroundStyle(Theme.neon.opacity(0.05))
+                    .stroke(Theme.neon.opacity(0.7), lineWidth: 2)
+            }
+            ForEach(positions) { p in
+                Annotation(p.displayName ?? "", coordinate: .init(latitude: p.lat, longitude: p.lng)) {
+                    PlayerDot(group: p.grp == "me" ? "seeker" : p.grp, stale: p.stale)
+                }
+            }
+        }
+        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
     }
 }
